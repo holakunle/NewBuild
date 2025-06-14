@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --sidebar-bg: #1f2937;
+            --sidebar-text: #f3f4f6;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            transition: width 0.3s;
+        }
+
+        .sidebar-collapsed {
+            width: 60px;
+        }
+
+        .sidebar-collapsed .sidebar-text {
+            display: none;
+        }
+
+        .sidebar-collapsed .sidebar-nav a,
+        .sidebar-collapsed .sidebar-nav button {
+            justify-content: center;
+        }
+
+        .sidebar-nav a,
+        .sidebar-nav button {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            color: var(--sidebar-text);
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .sidebar-nav a:hover,
+        .sidebar-nav button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-nav a.active {
+            background-color: var(--primary-color);
+        }
+
+        .sub-nav a {
+            padding: 6px 16px 6px 48px;
+            font-size: 0.875rem;
+        }
+
+        .sub-nav a:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .content {
+            transition: margin-left 0.3s;
+        }
+
+        .section-hidden {
+            display: none;
+        }
+
+        .section-visible {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-button {
+            background-color: var(--primary-color);
+            border-radius: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .action-button:hover {
+            background-color: #2563eb;
+        }
+
+        .spinner {
+            display: none;
+            border: 2px solid white;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            margin-left: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            display: none;
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 8px;
+        }
+
+        .success-message {
+            display: none;
+            color: #16a34a;
+            font-size: 0.875rem;
+            margin-top: 8px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        .table-row td {
+            white-space: nowrap;
+        }
+
+        [data-tooltip] {
+            position: relative;
+        }
+
+        [data-tooltip]:hover:after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #111827;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .sidebar-collapsed [data-tooltip]:hover:after {
+            left: 70px;
+        }
+
+        @media (max-width: 640px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+            }
+
+            .sidebar-mobile-hidden {
+                display: none;
+            }
+
+            .content {
+                margin-left: 0 !important;
+            }
+
+            .table-row td {
+                display: block;
+                text-align: right;
+                padding-left: 50%;
+                position: relative;
+                white-space: normal;
+            }
+
+            .table-row td:before {
+                content: attr(data-label);
+                position: absolute;
+                left: 16px;
+                width: 45%;
+                font-weight: 500;
+            }
+
+            .table-row td:last-child {
+                text-align: center;
+            }
+        }
+
+        #rolePermissionCheckboxes {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.5rem;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+    </style>
+</head>
+<body class="flex">
+    <button id="toggleSidebarMobile" class="sm:hidden fixed top-4 left-4 z-20 text-gray-800 focus:outline-none">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+        </svg>
+    </button>
+
+    <aside class="sidebar fixed top-0 left-0 h-full p-4">
+        <div class="flex items-center justify-between mb-4">
+            <h1 class="text-lg font-bold sidebar-text">Admin Panel</h1>
+            <button id="toggleSidebar" class="text-white focus:outline-none">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+                </svg>
+            </button>
+        </div>
+        <nav class="sidebar-nav space-y-2">
+            <a href="#" id="dashboardLink" class="active" data-tooltip="Dashboard">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+                <span class="sidebar-text">Dashboard</span>
+            </a>
+            <div>
+                <button id="userManagementToggle" class="flex items-center w-full text-left" data-tooltip="User Management">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    <span class="sidebar-text">User Management</span>
+                    <svg id="userManagementArrow" class="w-4 h-4 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </button>
+                <div id="userManagementSubNav" class="sub-nav space-y-1 mt-1 hidden">
+                    <a href="#" id="createUserLink" data-tooltip="Create User">Create User</a>
+                    <a href="#" id="createRoleLink" data-tooltip="Create Role">Create Role</a>
+                    <a href="#" id="assignRolesLink" data-tooltip="Assign Roles">Assign Roles</a>
+                    <a href="#" id="userListLink" data-tooltip="Users">Users</a>
+                    <a href="#" id="roleListLink" data-tooltip="Roles">Roles</a>
+                    <a href="#" id="auditTrailLink" data-tooltip="Audit Trail">Audit Trail</a>
+                </div>
+            </div>
+            <a href="#" data-tooltip="Settings">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                <span class="sidebar-text">Settings</span>
+            </a>
+            <button id="logoutButton" class="w-full text-left" data-tooltip="Logout">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                <span class="sidebar-text">Logout</span>
+            </button>
+        </nav>
+    </aside>
+
+    <main class="content flex-1 p-4 sm:p-6 ml-0 sm:ml-[250px]">
+        <section id="dashboardSection" class="section-visible">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Dashboard</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="card p-4">
+                    <h3 class="text-sm font-medium text-gray-500">Total Users</h3>
+                    <p id="userCount" class="text-2xl font-semibold text-gray-800">0</p>
+                </div>
+                <div class="card p-4">
+                    <h3 class="text-sm font-medium text-gray-500">Total Roles</h3>
+                    <p id="roleCount" class="text-2xl font-semibold text-gray-800">0</p>
+                </div>
+                <div class="card p-4">
+                    <h3 class="text-sm font-medium text-gray-500">Total Permissions</h3>
+                    <p id="permissionCount" class="text-2xl font-semibold text-gray-800">0</p>
+                </div>
+                <div class="card p-4">
+                    <h3 class="text-sm font-medium text-gray-500">Recent Activity</h3>
+                    <ul id="recentActivity" class="text-sm text-gray-600 mt-2 space-y-1"></ul>
+                </div>
+            </div>
+            <div id="dashboardError" class="error-message mt-4"></div>
+        </section>
+
+        <section id="createUserSection" class="section-hidden">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Create User</h2>
+            <div class="card p-4">
+                <form id="createUserForm" class="space-y-3">
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                        <input
+                            type="text"
+                            id="username"
+                            name="username"
+                            class="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+                            placeholder="Enter username"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            class="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+                            placeholder="Enter email"
+                        />
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            class="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+                            placeholder="Enter password"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label for="confirmPassword" class="block text-sm font-medium text-gray-700">Confirm Password</label>
+                        <input
+                            type="password"
+                            id="confirmPassword"
+                            name="confirmPassword"
+                            class="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+                            placeholder="Confirm password"
+                            required
+                        />
+                    </div>
+                    <div id="createUserError" class="error-message"></div>
+                    <div id="createUserSuccess" class="success-message"></div>
+                    <button
+                        type="submit"
+                        class="action-button w-full text-white py-1.5 px-4 text-sm focus:outline-none flex items-center justify-center"
+                    >
+                        <span id="createUserButtonText">Create User</span>
+                        <div id="createUserSpinner" class="spinner"></div>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <section id="createRoleSection" class="section-hidden">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Create Role</h2>
+            <div class="card p-4">
+                <form id="createRoleForm" class="space-y-3">
+                    <div>
+                        <label for="roleName" class="block text-sm font-medium text-gray-700">Role Name</label>
+                        <input
+                            type="text"
+                            id="roleName"
+                            name="roleName"
+                            class="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+                            placeholder="Enter role name"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label for="roleDescription" class="block text-sm font-medium text-gray-700">Description</label>
+                        <textarea
+                            id="roleDescription"
+                            name="roleDescription"
+                            class="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+                            placeholder="Describe the role (e.g., Can view and assign studies)"
+                        ></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Permissions</label>
+                        <div id="rolePermissionCheckboxes" class="mt-1.5 space-y-1.5"></div>
+                    </div>
+                    <div id="createRoleError" class="error-message"></div>
+                    <div id="createRoleSuccess" class="success-message"></div>
+                    <button
+                        type="submit"
+                        class="action-button w-full text-white py-1.5 px-4 text-sm focus:outline-none flex items-center justify-center"
+                    >
+                        <span id="createRoleButtonText">Create Role</span>
+                        <div id="createRoleSpinner" class="spinner"></div>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <section id="assignRolesSection" class="section-hidden">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Assign Roles</h2>
+            <div class="card p-4">
+                <form id="assignRoleForm" class="space-y-3">
+                    <div>
+                        <label for="selectUser" class="block text-sm font-medium text-gray-700">Select User</label>
+                        <select
+                            id="selectUser"
+                            name="user"
+                            class="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+                        >
+                            <option value="">Select a user</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Roles</label>
+                        <div id="roleCheckboxes" class="mt-1.5 space-y-1.5"></div>
+                    </div>
+                    <div id="assignRoleError" class="error-message"></div>
+                    <div id="assignRoleSuccess" class="success-message"></div>
+                    <button
+                        type="submit"
+                        class="action-button w-full text-white py-1.5 px-4 text-sm focus:outline-none flex items-center justify-center"
+                    >
+                        <span id="assignButtonText">Assign</span>
+                        <div id="assignSpinner" class="spinner"></div>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <section id="userListSection" class="section-hidden">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">User List</h2>
+            <div class="card p-4">
+                <div class="table-container">
+                    <table class="min-w-full bg-transparent border border-gray-200 rounded-lg">
+                        <thead>
+                            <tr>
+                                <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Username</th>
+                                <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Email</th>
+                                <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Roles</th>
+                                <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Permissions</th>
+                                <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Last Login</th>
+                                <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Login Count</th>
+                                <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Created At</th>
+                                <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Status</th>
+                                <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Audit Trail</th>
+                                <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="deleteUserSuccess" class="success-message"></div>
+                <div id="simulateLoginSuccess" class="success-message"></div>
+                <div id="toggleStatusSuccess" class="success-message"></div>
+            </div>
+        </section>
+
+        <section id="roleListSection" class="section-hidden">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Role List</h2>
+            <div class="card p-4">
+                <div class="table-container">
+                    <table class="min-w-full bg-transparent border border-gray-200 rounded-lg">
+                        <thead>
+                            <tr>
+                                <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Role Name</th>
+                                <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Description</th>
+                                <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Permissions</th>
+                                <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roleTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="deleteRoleSuccess" class="success-message"></div>
+            </div>
+        </section>
+
+        <section id="auditTrailSection" class="section-hidden">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Audit Trail</h2>
+            <div class="card p-4">
+                <div class="space-y-3">
+                    <div>
+                        <label for="auditUserSelect" class="block text-sm font-medium text-gray-700">Select User</label>
+                        <select
+                            id="auditUserSelect"
+                            name="user"
+                            class="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+                        >
+                            <option value="">Select a user</option>
+                        </select>
+                    </div>
+                    <div class="sm:flex sm:space-x-4">
+                        <div>
+                            <label for="auditDateStart" class="block text-sm font-medium text-gray-700">Start Date</label>
+                            <input
+                                type="date"
+                                id="auditDateStart"
+                                class="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+                            />
+                        </div>
+                        <div>
+                            <label for="auditDateEnd" class="block text-sm font-medium text-gray-700">End Date</label>
+                            <input
+                                type="date"
+                                id="auditDateEnd"
+                                class="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+                            />
+                        </div>
+                        <div>
+                            <label for="auditActionFilter" class="block text-sm font-medium text-gray-700">Action</label>
+                            <select
+                                id="auditActionFilter"
+                                class="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]"
+                            >
+                                <option value="">All Actions</option>
+                                <option value="User created">User created</option>
+                                <option value="User updated">User updated</option>
+                                <option value="Logged in">Logged in</option>
+                                <option value="Roles/permissions assigned">Roles/permissions assigned</option>
+                                <option value="Activated">Activated</option>
+                                <option value="Deactivated">Deactivated</option>
+                                <option value="Role created">Role created</option>
+                                <option value="Role updated">Role updated</option>
+                                <option value="Role removed">Role removed</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="userSummary" class="text-sm text-gray-700 hidden">
+                        <p><span class="font-medium">Username:</span> <span id="summaryUsername"></span></p>
+                        <p><span class="font-medium">Status:</span> <span id="summaryStatus"></span></p>
+                        <p><span class="font-medium">Last Login:</span> <span id="summaryLastLogin"></span></p>
+                        <p><span class="font-medium">Login Count:</span> <span id="summaryLoginCount"></span></p>
+                        <p><span class="font-medium">Created At:</span> <span id="summaryCreatedAt"></span></p>
+                    </div>
+                    <div class="table-container">
+                        <table class="min-w-full bg-transparent border border-gray-200 rounded-lg">
+                            <thead>
+                                <tr>
+                                    <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Action</th>
+                                    <th class="py-2 px-3 border-b text-left text-sm font-medium text-gray-700">Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditTrailTableBody"></tbody>
+                        </table>
+                    </div>
+                    <button
+                        id="exportAuditLog"
+                        class="action-button text-white py-1.5 px-4 text-sm mt-3 focus:outline-none"
+                    >
+                        Export Audit Log
+                    </button>
+                    <div id="exportAuditSuccess" class="success-message"></div>
+                    <div id="exportAuditError" class="error-message"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            let isEditingUser = false;
+            let editingUserId = null;
+            let isEditingRole = false;
+            let editingRoleId = null;
+
+            // Helper to decode JWT token
+            function parseJwt(token) {
+                try {
+                    const base64Url = token.split('.')[1];
+                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                    }).join(''));
+                    return JSON.parse(jsonPayload);
+                } catch (e) {
+                    console.error('Error parsing JWT:', e);
+                    return null;
+                }
+            }
+
+            // Check authentication and admin permission
+            async function checkAuth() {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) {
+                    showMessage('dashboardError', 'No user logged in. Redirecting to login.', true, 'dashboardSection');
+                    setTimeout(() => { window.location.href = '/login.html'; }, 2000);
+                    return false;
+                }
+                const payload = parseJwt(token);
+                if (!payload || !payload.sub) {
+                    showMessage('dashboardError', 'Invalid token. Redirecting to login.', true, 'dashboardSection');
+                    setTimeout(() => { window.location.href = '/login.html'; }, 2000);
+                    return false;
+                }
+                try {
+                    const response = await fetch('/api/users', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                    }
+                    const users = await response.json();
+                    console.log('Users response:', users);
+                    console.log('JWT sub:', payload.sub);
+                    const currentUser = users.find(u => u.username.toLowerCase() === payload.sub.toLowerCase());
+                    if (!currentUser) {
+                        console.error('Current user not found in /api/users response');
+                        showMessage('dashboardError', `User ${payload.sub} not found. Redirecting to login.`, true, 'dashboardSection');
+                        setTimeout(() => { window.location.href = '/login.html'; }, 2000);
+                        return false;
+                    }
+                    const permissionNames = currentUser.permissions ? currentUser.permissions.map(p => p.name) : [];
+                    console.log('User permissions:', permissionNames);
+                    if (!permissionNames.includes('manage_users')) {
+                        console.error('User lacks manage_users permission:', permissionNames);
+                        showMessage('dashboardError', 'Insufficient permissions. Redirecting to login.', true, 'dashboardSection');
+                        setTimeout(() => { window.location.href = '/login.html'; }, 2000);
+                        return false;
+                    }
+                    return true;
+                } catch (error) {
+                    console.error('Auth check failed:', error);
+                    showMessage('dashboardError', `Authentication error: ${error.message}. Redirecting to login.`, true, 'dashboardSection');
+                    setTimeout(() => { window.location.href = '/login.html'; }, 2000);
+                    return false;
+                }
+            }
+
+            // API request helper
+            async function apiRequest(endpoint, method = 'GET', body = null) {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) {
+                    throw new Error('No token found');
+                }
+                const headers = {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                };
+                const options = { method, headers };
+                if (body) options.body = JSON.stringify(body);
+                try {
+                    const response = await fetch(`/api${endpoint}`, options);
+                    if (response.status === 401) {
+                        showMessage('dashboardError', 'Session expired. Redirecting to login.', true, 'dashboardSection');
+                        setTimeout(() => { window.location.href = '/login.html'; }, 2000);
+                        throw new Error('Unauthorized');
+                    }
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`HTTP ${response.status}: ${errorText}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error(`API request to ${endpoint} failed:`, error);
+                    throw error;
+                }
+            }
+
+            // Fetch users
+            async function fetchUsers() {
+                try {
+                    return await apiRequest('/users');
+                } catch (error) {
+                    console.error('Error fetching users:', error);
+                    showMessage('dashboardError', `Failed to fetch users: ${error.message}`, true, 'dashboardSection');
+                    return [];
+                }
+            }
+
+            // Fetch roles
+            async function fetchRoles() {
+                try {
+                    return await apiRequest('/roles');
+                } catch (error) {
+                    console.error('Error fetching roles:', error);
+                    showMessage('dashboardError', `Failed to fetch roles: ${error.message}`, true, 'dashboardSection');
+                    return [];
+                }
+            }
+
+            // Fetch permissions
+            async function fetchPermissions() {
+                try {
+                    return await apiRequest('/permissions');
+                } catch (error) {
+                    console.error('Error fetching permissions:', error);
+                    showMessage('dashboardError', `Failed to fetch permissions: ${error.message}`, true, 'dashboardSection');
+                    return [];
+                }
+            }
+
+            // Fetch audit logs
+            async function fetchAuditLogs(userId, startDate, endDate, action) {
+                try {
+                    let endpoint = userId ? `/audit-logs?userId=${encodeURIComponent(userId)}` : '/audit-logs';
+                    if (startDate) endpoint += `&startDate=${encodeURIComponent(startDate)}`;
+                    if (endDate) endpoint += `&endDate=${encodeURIComponent(endDate)}`;
+                    if (action) endpoint += `&action=${encodeURIComponent(action)}`;
+                    return await apiRequest(endpoint);
+                } catch (error) {
+                    console.error('Error fetching audit logs:', error);
+                    showMessage('exportAuditError', `Failed to fetch audit logs: ${error.message}`, true, 'auditTrailSection');
+                    return [];
+                }
+            }
+
+            // Fetch dashboard stats
+            async function fetchDashboardStats() {
+                try {
+                    const [users, roles, permissions, auditLogs] = await Promise.all([
+                        fetchUsers(),
+                        fetchRoles(),
+                        fetchPermissions(),
+                        fetchAuditLogs(null, null, null, null) // Fetch all audit logs for recent activity
+                    ]);
+
+                    // Compute stats
+                    const userCount = users.length;
+                    const roleCount = roles.length;
+                    const permissionCount = permissions.length;
+
+                    // Format recent activity from audit logs
+                    const recentActivity = auditLogs
+                        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                        .slice(0, 5)
+                        .map(log => ({
+                            message: log.action,
+                            timestamp: log.timestamp
+                        }));
+
+                    return {
+                        userCount,
+                        roleCount,
+                        permissionCount,
+                        recentActivity
+                    };
+                } catch (error) {
+                    console.error('Error computing dashboard stats:', error);
+                    showMessage('dashboardError', `Failed to compute dashboard stats: ${error.message}`, true, 'dashboardSection');
+                    return {
+                        userCount: 0,
+                        roleCount: 0,
+                        permissionCount: 0,
+                        recentActivity: []
+                    };
+                }
+            }
+
+            // Toggle sidebar
+            const sidebar = document.querySelector('.sidebar');
+            const content = document.querySelector('.content');
+            const toggleSidebar = document.getElementById('toggleSidebar');
+            const toggleSidebarMobile = document.getElementById('toggleSidebarMobile');
+            let isCollapsed = false;
+
+            toggleSidebar.addEventListener('click', () => {
+                isCollapsed = !isCollapsed;
+                sidebar.classList.toggle('sidebar-collapsed', isCollapsed);
+                content.classList.toggle('sm:ml-[60px]', isCollapsed);
+                content.classList.toggle('sm:ml-[250px]', !isCollapsed);
+            });
+
+            toggleSidebarMobile.addEventListener('click', () => {
+                sidebar.classList.toggle('sidebar-mobile-hidden');
+            });
+
+            // Navigation
+            const sections = {
+                dashboard: document.getElementById('dashboardSection'),
+                createUser: document.getElementById('createUserSection'),
+                createRole: document.getElementById('createRoleSection'),
+                assignRoles: document.getElementById('assignRolesSection'),
+                userList: document.getElementById('userListSection'),
+                roleList: document.getElementById('roleListSection'),
+                auditTrail: document.getElementById('auditTrailSection')
+            };
+
+            const navLinks = {
+                dashboard: document.getElementById('dashboardLink'),
+                createUser: document.getElementById('createUserLink'),
+                createRole: document.getElementById('createRoleLink'),
+                assignRoles: document.getElementById('assignRolesLink'),
+                userList: document.getElementById('userListLink'),
+                roleList: document.getElementById('roleListLink'),
+                auditTrail: document.getElementById('auditTrailLink')
+            };
+
+            const userManagementToggle = document.getElementById('userManagementToggle');
+            const userManagementSubNav = document.getElementById('userManagementSubNav');
+            const userManagementArrow = document.getElementById('userManagementArrow');
+            let isSubNavOpen = false;
+
+            userManagementToggle.addEventListener('click', () => {
+                isSubNavOpen = !isSubNavOpen;
+                userManagementSubNav.classList.toggle('hidden', !isSubNavOpen);
+                userManagementArrow.classList.toggle('rotate-180', isSubNavOpen);
+            });
+
+            function showSection(sectionKey) {
+                Object.values(sections).forEach(section => {
+                    section.classList.remove('section-visible');
+                    section.classList.add('section-hidden');
+                });
+                sections[sectionKey].classList.remove('section-hidden');
+                sections[sectionKey].classList.add('section-visible');
+
+                Object.values(navLinks).forEach(link => link && link.classList.remove('active'));
+                if (navLinks[sectionKey]) {
+                    navLinks[sectionKey].classList.add('active');
+                    navLinks.dashboard.classList.remove('active');
+                    isSubNavOpen = true;
+                    userManagementSubNav.classList.remove('hidden');
+                    userManagementArrow.classList.add('rotate-180');
+                } else {
+                    navLinks.dashboard.classList.add('active');
+                }
+            }
+
+            navLinks.dashboard.addEventListener('click', (e) => {
+                e.preventDefault();
+                showSection('dashboard');
+                updateDashboard();
+            });
+
+            navLinks.createUser.addEventListener('click', (e) => {
+                e.preventDefault();
+                isEditingUser = false;
+                editingUserId = null;
+                document.getElementById('createUserForm').reset();
+                document.getElementById('createUserButtonText').textContent = 'Create User';
+                document.getElementById('password').setAttribute('required', '');
+                document.getElementById('confirmPassword').setAttribute('required', '');
+                showSection('createUser');
+            });
+
+            navLinks.createRole.addEventListener('click', (e) => {
+                e.preventDefault();
+                isEditingRole = false;
+                editingRoleId = null;
+                document.getElementById('createRoleForm').reset();
+                document.getElementById('createRoleButtonText').textContent = 'Create Role';
+                updateRolePermissionCheckboxes();
+                showSection('createRole');
+            });
+
+            navLinks.assignRoles.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await updateUserSelect();
+                await updateRoleCheckboxes();
+                showSection('assignRoles');
+            });
+
+            navLinks.userList.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await updateUserTable();
+                showSection('userList');
+            });
+
+            navLinks.roleList.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await updateRoleTable();
+                showSection('roleList');
+            });
+
+            navLinks.auditTrail.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await updateUserSelect();
+                await updateAuditTrailTable();
+                showSection('auditTrail');
+            });
+
+            // Update user select dropdown
+            async function updateUserSelect() {
+                const selectAssign = document.getElementById('selectUser');
+                const selectAudit = document.getElementById('auditUserSelect');
+                selectAssign.innerHTML = '<option value="">Select a user</option>';
+                selectAudit.innerHTML = '<option value="">Select a user</option>';
+                const users = await fetchUsers();
+                users.forEach(user => {
+                    const optionAssign = document.createElement('option');
+                    const optionAudit = document.createElement('option');
+                    optionAssign.value = user.id;
+                    optionAssign.textContent = user.username;
+                    optionAudit.value = user.id;
+                    optionAudit.textContent = user.username;
+                    selectAssign.appendChild(optionAssign);
+                    selectAudit.appendChild(optionAudit);
+                });
+            }
+
+            // Update role checkboxes
+            async function updateRoleCheckboxes() {
+                const container = document.getElementById('roleCheckboxes');
+                container.innerHTML = '';
+                const roles = await fetchRoles();
+                roles.forEach(role => {
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <input
+                            type="checkbox"
+                            id="role${role.id}"
+                            name="roles"
+                            value="${role.id}"
+                            class="h-4 w-4 text-[var(--primary-color)] focus:ring-[var(--primary-color)] border-gray-300 rounded"
+                        />
+                        <label for="role${role.id}" class="ml-2 text-sm text-gray-700">${role.name}</label>
+                    `;
+                    container.appendChild(div);
+                });
+                if (roles.length === 0) {
+                    container.innerHTML = '<p class="text-sm text-gray-500">No roles available. Create a role first.</p>';
+                }
+            }
+
+            // Update permission checkboxes
+            async function updatePermissionCheckboxes() {
+                const container = document.getElementById('permissionCheckboxes');
+                container.innerHTML = '';
+                const permissions = await fetchPermissions();
+                permissions.forEach(perm => {
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <input
+                            type="checkbox"
+                            id="perm${perm.id}"
+                            name="permissions"
+                            value="${perm.id}"
+                            class="h-4 w-4 text-[var(--primary-color)] focus:ring-[var(--primary-color)] border-gray-300 rounded"
+                        />
+                        <label for="perm${perm.id}" class="ml-2 text-sm text-gray-700">${perm.name}</label>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+
+            // Update role permission checkboxes
+            async function updateRolePermissionCheckboxes() {
+                const container = document.getElementById('rolePermissionCheckboxes');
+                container.innerHTML = '';
+                const permissions = await fetchPermissions();
+                permissions.forEach(perm => {
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <input
+                            type="checkbox"
+                            id="rolePerm${perm.id}"
+                            name="rolePermissions"
+                            value="${perm.id}"
+                            class="h-4 w-4 text-[var(--primary-color)] focus:ring-[var(--primary-color)] border-gray-300 rounded"
+                        />
+                        <label for="rolePerm${perm.id}" class="ml-2 text-sm text-gray-700">${perm.name}</label>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+
+            // Update user table
+            async function updateUserTable() {
+                const tbody = document.getElementById('userTableBody');
+                tbody.innerHTML = '';
+                const users = await fetchUsers();
+                users.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.className = 'table-row';
+                    row.innerHTML = `
+                        <td class="py-2 px-3 border-b text-sm text-gray-700" data-label="Username">${user.username}</td>
+                        <td class="py-2 px-3 border-b text-sm text-gray-700" data-label="Email">${user.email || '-'}</td>
+                        <td class="py-2 px-3 border-b text-sm text-gray-700" data-label="Roles">${user.roles.map(r => r.name).join(', ') || '-'}</td>
+                        <td class="py-2 px-3 border-b text-sm text-gray-700" data-label="Permissions">${user.permissions.map(p => p.name).join(', ') || '-'}</td>
+                        <td class="py-2 px-3 border-b text-sm text-gray-700" data-label="Last Login">${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</td>
+                        <td class="py-2 px-3 border-b text-sm text-gray-700" data-label="Login Count">${user.login_count}</td>
+                        <td class="py-2 px-3 border-b text-sm text-gray-700" data-label="Created At">${new Date(user.created_at).toLocaleString()}</td>
+                        <td class="py-2 px-3 border-b text-sm" data-label="Status">
+                            <span class="${user.is_active ? 'text-green-600' : 'text-red-600'}">${user.is_active ? 'Active' : 'Inactive'}</span>
+                        </td>
+                        <td class="py-2 px-3 border-b text-sm" data-label="Audit Trail">
+                            <button class="text-blue-600 hover:underline text-sm view-audit" data-user-id="${user.id}">View</button>
+                        </td>
+                        <td class="py-2 px-3 border-b text-sm" data-label="Actions">
+                            <button class="text-green-600 hover:underline text-sm simulate-login" data-user-id="${user.id}">Simulate Login</button>
+                            <button class="text-purple-600 hover:underline text-sm ml-2 toggle-status" data-user-id="${user.id}">${user.is_active ? 'Deactivate' : 'Activate'}</button>
+                            <button class="text-blue-600 hover:underline text-sm ml-2 edit-user" data-user-id="${user.id}">Edit</button>
+                            <button class="text-red-600 hover:underline text-sm ml-2 delete-user" data-user-id="${user.id}">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                document.querySelectorAll('.simulate-login').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const userId = button.dataset.userId;
+                        await simulateUserLogin(userId);
+                    });
+                });
+
+                document.querySelectorAll('.toggle-status').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const userId = button.dataset.userId;
+                        await toggleUserStatus(userId);
+                    });
+                });
+
+                document.querySelectorAll('.edit-user').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const userId = button.dataset.userId;
+                        isEditingUser = true;
+                        editingUserId = userId;
+                        const user = (await fetchUsers()).find(u => u.id === userId);
+                        document.getElementById('username').value = user.username;
+                        document.getElementById('email').value = user.email || '';
+                        document.getElementById('password').value = '';
+                        document.getElementById('confirmPassword').value = '';
+                        document.getElementById('createUserButtonText').textContent = 'Update User';
+                        document.getElementById('password').removeAttribute('required');
+                        document.getElementById('confirmPassword').removeAttribute('required');
+                        showSection('createUser');
+                    });
+                });
+
+                document.querySelectorAll('.delete-user').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const userId = button.dataset.userId;
+                        const user = (await fetchUsers()).find(u => u.id === userId);
+                        if (confirm(`Delete user ${user.username}?`)) {
+                            try {
+                                await apiRequest(`/users/${userId}`, 'DELETE');
+                                await updateUserTable();
+                                await updateUserSelect();
+                                showMessage('deleteUserSuccess', `User ${user.username} deleted successfully.`, false, 'userListSection');
+                            } catch (error) {
+                                showMessage('deleteUserSuccess', `Failed to delete user: ${error.message}`, true, 'userListSection');
+                            }
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.view-audit').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const userId = button.dataset.userId;
+                        showSection('auditTrail');
+                        document.getElementById('auditUserSelect').value = userId;
+                        await updateAuditTrailTable();
+                    });
+                });
+            }
+
+            // Update role table
+            async function updateRoleTable() {
+                const tbody = document.getElementById('roleTableBody');
+                tbody.innerHTML = '';
+                const roles = await fetchRoles();
+                roles.forEach(role => {
+                    const row = document.createElement('tr');
+                    row.className = 'table-row';
+                    row.innerHTML = `
+                        <td class="py-2 px-3 border-b text-sm text-gray-700" data-label="Role Name">${role.name}</td>
+                        <td class="py-2 px-3 border-b text-sm text-gray-700" data-label="Description">${role.description || '-'}</td>
+                        <td class="py-2 px-3 border-b text-sm text-gray-700" data-label="Permissions">${role.permissions.map(p => p.name).join(', ') || '-'}</td>
+                        <td class="py-2 px-3 border-b text-sm" data-label="Actions">
+                            <button class="text-blue-600 hover:underline text-sm edit-role" data-role-id="${role.id}">Edit</button>
+                            <button class="text-red-600 hover:underline text-sm ml-2 delete-role" data-role-id="${role.id}">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                document.querySelectorAll('.edit-role').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const roleId = button.dataset.roleId;
+                        isEditingRole = true;
+                        editingRoleId = roleId;
+                        const role = (await fetchRoles()).find(r => r.id === roleId);
+                        document.getElementById('roleName').value = role.name;
+                        document.getElementById('roleDescription').value = role.description || '';
+                        await updateRolePermissionCheckboxes();
+                        role.permissions.forEach(perm => {
+                            const checkbox = document.getElementById(`rolePerm${perm.id}`);
+                            if (checkbox) checkbox.checked = true;
+                        });
+                        document.getElementById('createRoleButtonText').textContent = 'Update Role';
+                        showSection('createRole');
+                    });
+                });
+
+                document.querySelectorAll('.delete-role').forEach(button => {
+                    button.addEventListener('click', async () => {
+                        const roleId = button.dataset.roleId;
+                        const role = (await fetchRoles()).find(r => r.id === roleId);
+                        if (confirm(`Delete role ${role.name}?`)) {
+                            try {
+                                await apiRequest(`/roles/${roleId}`, 'DELETE');
+                                await updateRoleTable();
+                                await updateRoleCheckboxes();
+                                await updateUserTable();
+                                await updateAuditTrailTable();
+                                showMessage('deleteRoleSuccess', `Role ${role.name} deleted successfully.`, false, 'roleListSection');
+                            } catch (error) {
+                                showMessage('deleteRoleSuccess', `Failed to delete role: ${error.message}`, true, 'roleListSection');
+                            }
+                        }
+                    });
+                });
+            }
+
+            // Update audit trail table
+            async function updateAuditTrailTable() {
+                const userId = document.getElementById('auditUserSelect').value;
+                const startDate = document.getElementById('auditDateStart').value;
+                const endDate = document.getElementById('auditDateEnd').value;
+                const actionFilter = document.getElementById('auditActionFilter').value;
+                const tbody = document.getElementById('auditTrailTableBody');
+                const userSummary = document.getElementById('userSummary');
+                const summaryUsername = document.getElementById('summaryUsername');
+                const summaryStatus = document.getElementById('summaryStatus');
+                const summaryLastLogin = document.getElementById('summaryLastLogin');
+                const summaryLoginCount = document.getElementById('summaryLoginCount');
+                const summaryCreatedAt = document.getElementById('summaryCreatedAt');
+
+                tbody.innerHTML = '';
+                userSummary.classList.add('hidden');
+
+                if (userId) {
+                    const users = await fetchUsers();
+                    const user = users.find(u => u.id == userId);
+                    if (user) {
+                        summaryUsername.textContent = user.username;
+                        summaryStatus.textContent = user.is_active ? 'Active' : 'Inactive';
+                        summaryStatus.className = user.is_active ? 'text-green-600' : 'text-red-600';
+                        summaryLastLogin.textContent = user.last_login ? new Date(user.last_login).toLocaleString() : 'Never';
+                        summaryLoginCount.textContent = user.login_count;
+                        summaryCreatedAt.textContent = new Date(user.created_at).toLocaleString();
+                        userSummary.classList.remove('hidden');
+
+                        const logs = await fetchAuditLogs(userId, startDate, endDate, actionFilter);
+                        logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).forEach(log => {
+                            const row = document.createElement('tr');
+                            row.className = 'table-row';
+                            row.innerHTML = `
+                                <td class="py-2 px-3 border-b text-sm text-gray-700" data-label="Action">${log.action}</td>
+                                <td class="py-2 px-3 border-b text-sm text-gray-700" data-label="Timestamp">${new Date(log.timestamp).toLocaleString()}</td>
+                            `;
+                            tbody.appendChild(row);
+                        });
+
+                        if (logs.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="2" class="py-2 px-3 text-sm text-gray-500 text-center">No audit logs match the filters.</td></tr>';
+                        }
+                    }
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="2" class="py-2 px-3 text-sm text-gray-500 text-center">Select a user to view audit logs.</td></tr>';
+                }
+            }
+
+            // Export audit log
+            document.getElementById('exportAuditLog').addEventListener('click', async () => {
+                const userId = document.getElementById('auditUserSelect').value;
+                if (!userId) {
+                    showMessage('exportAuditError', 'Please select a user.', true, 'auditTrailSection');
+                    return;
+                }
+                try {
+                    const users = await fetchUsers();
+                    const user = users.find(u => u.id == userId);
+                    if (!user) {
+                        showMessage('exportAuditError', 'Selected user not found.', true, 'auditTrailSection');
+                        return;
+                    }
+                    const logs = await fetchAuditLogs(userId, null, null, null);
+                    if (!logs || logs.length === 0) {
+                        showMessage('exportAuditError', 'No audit logs found for the selected user.', true, 'auditTrailSection');
+                        return;
+                    }
+                    const csv = logs.map(log => `"${log.action.replace(/"/g, '""')}","${log.timestamp}"`).join('\n');
+                    const blob = new Blob([`Action,Timestamp\n${csv}`], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${user.username}_audit_log.csv`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showMessage('exportAuditSuccess', `Audit log exported for ${user.username}.`, false, 'auditTrailSection');
+                } catch (error) {
+                    console.error('Audit log export error:', error);
+                    showMessage('exportAuditError', `Failed to export audit log: ${error.message}`, true, 'auditTrailSection');
+                }
+            });
+
+            // Simulate user login
+            async function simulateUserLogin(userId) {
+                try {
+                    await apiRequest(`/users/${userId}/login`, 'POST');
+                    await updateUserTable();
+                    await updateAuditTrailTable();
+                    showMessage('simulateLoginSuccess', `Login simulated for user.`, false, 'userListSection');
+                } catch (error) {
+                    showMessage('simulateLoginSuccess', `Failed to simulate login: ${error.message}`, true, 'userListSection');
+                }
+            }
+
+            // Toggle user status
+            async function toggleUserStatus(userId) {
+                try {
+                    const user = (await fetchUsers()).find(u => u.id == userId);
+                    await apiRequest(`/users/${userId}/status`, 'PUT', { is_active: !user.is_active });
+                    await updateUserTable();
+                    await updateAuditTrailTable();
+                    showMessage('toggleStatusSuccess', `User ${user.is_active ? 'deactivated' : 'activated'} successfully.`, false, 'userListSection');
+                } catch (error) {
+                    showMessage('toggleStatusSuccess', `Failed to toggle user status: ${error.message}`, true, 'userListSection');
+                }
+            }
+
+            // Update dashboard
+            async function updateDashboard() {
+                const stats = await fetchDashboardStats();
+                document.getElementById('userCount').textContent = stats.userCount || 0;
+                document.getElementById('roleCount').textContent = stats.roleCount || 0;
+                document.getElementById('permissionCount').textContent = stats.permissionCount || 0;
+                const activityList = document.getElementById('recentActivity');
+                activityList.innerHTML = '';
+                (stats.recentActivity || []).forEach(activity => {
+                    const li = document.createElement('li');
+                    li.textContent = `${activity.message} (${new Date(activity.timestamp).toLocaleTimeString()})`;
+                    activityList.appendChild(li);
+                });
+            }
+
+            // Show success/error message
+            function showMessage(elementId, message, isError = false, sectionId = null) {
+                const section = sectionId ? document.getElementById(sectionId) : document.querySelector('.section-visible');
+                const element = section.querySelector(`#${elementId}`) || document.createElement('div');
+                element.id = elementId;
+                element.textContent = message;
+                element.style.display = 'block';
+                element.className = isError ? 'error-message' : 'success-message';
+                if (!section.querySelector(`#${elementId}`)) {
+                    section.querySelector('.card') ? section.querySelector('.card').prepend(element) : section.prepend(element);
+                }
+                setTimeout(() => {
+                    element.style.display = 'none';
+                }, 3000);
+            }
+
+            // Create user form submission
+            document.getElementById('createUserForm').addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                const username = document.getElementById('username').value.trim();
+                const email = document.getElementById('email').value.trim();
+                const password = document.getElementById('password').value.trim();
+                const confirmPassword = document.getElementById('confirmPassword').value.trim();
+                const errorMessage = document.getElementById('createUserError');
+                const successMessage = document.getElementById('createUserSuccess');
+                const buttonText = document.getElementById('createUserButtonText');
+                const spinner = document.getElementById('createUserSpinner');
+
+                errorMessage.style.display = 'none';
+                successMessage.style.display = 'none';
+                buttonText.style.display = 'none';
+                spinner.style.display = 'block';
+
+                if (isEditingUser) {
+                    if (password && password !== confirmPassword) {
+                        showMessage('createUserError', 'Passwords do not match.', true, 'createUserSection');
+                        buttonText.style.display = 'block';
+                        spinner.style.display = 'none';
+                        return;
+                    }
+                    try {
+                        const updateData = { username, email };
+                        if (password) updateData.password = password;
+                        await apiRequest(`/users/${editingUserId}`, 'PUT', updateData);
+                        await updateUserSelect();
+                        await updateUserTable();
+                        await updateAuditTrailTable();
+                        showMessage('createUserSuccess', `User ${username} updated successfully.`, false, 'createUserSection');
+
+                        document.getElementById('createUserForm').reset();
+                        isEditingUser = false;
+                        editingUserId = null;
+                        document.getElementById('createUserButtonText').textContent = 'Create User';
+                        document.getElementById('password').setAttribute('required', '');
+                        document.getElementById('confirmPassword').setAttribute('required', '');
+                        buttonText.style.display = 'block';
+                        spinner.style.display = 'none';
+                        showSection('userList');
+                    } catch (error) {
+                        showMessage('createUserError', `Failed to update user: ${error.message}`, true, 'createUserSection');
+                        buttonText.style.display = 'block';
+                        spinner.style.display = 'none';
+                    }
+                } else {
+                    if (!username || !password || !confirmPassword) {
+                        showMessage('createUserError', 'Please fill in all required fields.', true, 'createUserSection');
+                        buttonText.style.display = 'block';
+                        spinner.style.display = 'none';
+                        return;
+                    }
+                    if (password !== confirmPassword) {
+                        showMessage('createUserError', 'Passwords do not match.', true, 'createUserSection');
+                        buttonText.style.display = 'block';
+                        spinner.style.display = 'none';
+                        return;
+                    }
+                    try {
+                        await apiRequest('/users', 'POST', { username, email, password });
+                        await updateUserSelect();
+                        await updateUserTable();
+                        await updateDashboard();
+                        showMessage('createUserSuccess', `User ${username} created successfully.`, false, 'createUserSection');
+
+                        document.getElementById('createUserForm').reset();
+                        buttonText.style.display = 'block';
+                        spinner.style.display = 'none';
+                    } catch (error) {
+                        showMessage('createUserError', `Failed to create user: ${error.message}`, true, 'createUserSection');
+                        buttonText.style.display = 'block';
+                        spinner.style.display = 'none';
+                    }
+                }
+            });
+
+            // Create role form submission
+            document.getElementById('createRoleForm').addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                const roleName = document.getElementById('roleName').value.trim();
+                const roleDescription = document.getElementById('roleDescription').value.trim();
+                const rolePermissions = Array.from(document.querySelectorAll('input[name="rolePermissions"]:checked')).map(input => parseInt(input.value));
+                const errorMessage = document.getElementById('createRoleError');
+                const successMessage = document.getElementById('createRoleSuccess');
+                const buttonText = document.getElementById('createRoleButtonText');
+                const spinner = document.getElementById('createRoleSpinner');
+
+                errorMessage.style.display = 'none';
+                successMessage.style.display = 'none';
+                buttonText.style.display = 'none';
+                spinner.style.display = 'block';
+
+                if (isEditingRole) {
+                    if (!roleName) {
+                        showMessage('createRoleError', 'Please enter a role name.', true, 'createRoleSection');
+                        buttonText.style.display = 'block';
+                        spinner.style.display = 'none';
+                        return;
+                    }
+                    try {
+                        await apiRequest(`/roles/${editingRoleId}`, 'PUT', {
+                            name: roleName,
+                            description: roleDescription,
+                            permission_ids: rolePermissions
+                        });
+                        await updateRoleTable();
+                        await updateRoleCheckboxes();
+                        await updateUserTable();
+                        await updateAuditTrailTable();
+                        showMessage('createRoleSuccess', `Role ${roleName} updated successfully.`, false, 'createRoleSection');
+
+                        document.getElementById('createRoleForm').reset();
+                        isEditingRole = false;
+                        editingRoleId = null;
+                        document.getElementById('createRoleButtonText').textContent = 'Create Role';
+                        await updateRolePermissionCheckboxes();
+                        buttonText.style.display = 'block';
+                        spinner.style.display = 'none';
+                        showSection('roleList');
+                    } catch (error) {
+                        showMessage('createRoleError', `Failed to update role: ${error.message}`, true, 'createRoleSection');
+                        buttonText.style.display = 'block';
+                        spinner.style.display = 'none';
+                    }
+                } else {
+                    if (!roleName) {
+                        showMessage('createRoleError', 'Please enter a role name.', true, 'createRoleSection');
+                        buttonText.style.display = 'block';
+                        spinner.style.display = 'none';
+                        return;
+                    }
+                    try {
+                        await apiRequest('/roles', 'POST', {
+                            name: roleName,
+                            description: roleDescription,
+                            permission_ids: rolePermissions
+                        });
+                        await updateRoleTable();
+                        await updateRoleCheckboxes();
+                        await updateDashboard();
+                        showMessage('createRoleSuccess', `Role ${roleName} created successfully.`, false, 'createRoleSection');
+
+                        document.getElementById('createRoleForm').reset();
+                        await updateRolePermissionCheckboxes();
+                        buttonText.style.display = 'block';
+                        spinner.style.display = 'none';
+                    } catch (error) {
+                        showMessage('createRoleError', `Failed to create role: ${error.message}`, true, 'createRoleSection');
+                        buttonText.style.display = 'block';
+                        spinner.style.display = 'none';
+                    }
+                }
+            });
+
+            // Role assignment form submission
+            document.getElementById('assignRoleForm').addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                const userId = document.getElementById('selectUser').value;
+                const roleIds = Array.from(document.querySelectorAll('input[name="roles"]:checked')).map(input => parseInt(input.value));
+                const errorMessage = document.getElementById('assignRoleError');
+                const successMessage = document.getElementById('assignRoleSuccess');
+                const buttonText = document.getElementById('assignButtonText');
+                const spinner = document.getElementById('assignSpinner');
+
+                errorMessage.style.display = 'none';
+                successMessage.style.display = 'none';
+                buttonText.style.display = 'none';
+                spinner.style.display = 'block';
+
+                if (!userId) {
+                    showMessage('assignRoleError', 'Please select a user.', true, 'assignRolesSection');
+                    buttonText.style.display = 'block';
+                    spinner.style.display = 'none';
+                    return;
+                }
+
+                if (roleIds.length === 0) {
+                    showMessage('assignRoleError', 'Please select at least one role.', true, 'assignRolesSection');
+                    buttonText.style.display = 'block';
+                    spinner.style.display = 'none';
+                    return;
+                }
+
+                try {
+                    console.log('Assigning roles:', { userId, roleIds });
+                    await apiRequest(`/users/${userId}/roles-permissions`, 'PUT', { role_ids: roleIds });
+                    await updateUserTable();
+                    await updateAuditTrailTable();
+                    const users = await fetchUsers();
+                    const user = users.find(u => u.id == userId);
+                    if (!user) {
+                        showMessage('assignRoleError', 'Selected user not found.', true, 'assignRolesSection');
+                        buttonText.style.display = 'block';
+                        spinner.style.display = 'none';
+                        return;
+                    }
+                    showMessage('assignRoleSuccess', `Roles assigned to ${user.username}.`, false, 'assignRolesSection');
+
+                    document.getElementById('assignRoleForm').reset();
+                    await updateRoleCheckboxes();
+                    buttonText.style.display = 'block';
+                    spinner.style.display = 'none';
+                } catch (error) {
+                    console.error('Rolethiaassignment error:', error);
+                    showMessage('assignRoleError', `Failed to assign roles: ${error.message}`, true, 'assignRolesSection');
+                    buttonText.style.display = 'block';
+                    spinner.style.display = 'none';
+                }
+            });
+
+            // Logout
+            document.getElementById('logoutButton').addEventListener('click', () => {
+                localStorage.removeItem('token');
+                sessionStorage.removeItem('token');
+                window.location.href = '/login.html';
+            });
+
+            // Initialize
+            if (await checkAuth()) {
+                await updateDashboard();
+                await updateUserSelect();
+                await updateRoleCheckboxes();
+                await updateRolePermissionCheckboxes();
+                await updateUserTable();
+                await updateRoleTable();
+                await updateAuditTrailTable();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Medical Imaging Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Customizable background and colors */
+        :root {
+            --background-image: url('https://images.unsplash.com/photo-1505751172876-fa1923c5c7a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+            --background-color: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5));
+            --form-bg-color: rgba(255, 255, 255, 0.95);
+            --primary-color: #1e40af;
+            --success-color: #16a34a;
+        }
+
+        body {
+            background-image: var(--background-image);
+            background-color: var(--background-color);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .login-container {
+            background-color: var(--form-bg-color);
+            border-radius: 0.5rem;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            position: relative;
+            transition: transform 0.5s ease, scale 0.5s ease;
+        }
+
+        .error-message {
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .welcome-note {
+            opacity: 0;
+            animation: fadeIn 1s ease-in forwards;
+        }
+
+        .form-toggle {
+            color: var(--primary-color);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .form-toggle:hover {
+            color: #1e3a8a;
+        }
+
+        /* Animation styles */
+        .slide-up {
+            transform: translateY(-20px) scale(0.9);
+        }
+
+        .progress-animation {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .progress-circle {
+            width: 60px;
+            height: 60px;
+            display: block;
+            stroke-width: 4;
+            stroke: var(--primary-color);
+            fill: none;
+            animation: progress 1s ease-in-out forwards;
+        }
+
+        .success-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: none;
+            stroke-width: 2;
+            stroke: #fff;
+            stroke-miterlimit: 10;
+            box-shadow: inset 0px 0px 0px var(--success-color);
+            animation: fill-success 0.4s ease-in-out forwards, scale-success 0.3s ease-in-out 0.4s both;
+        }
+
+        .success-check {
+            transform-origin: 50% 50%;
+            stroke-dasharray: 48;
+            stroke-dashoffset: 48;
+            animation: stroke-success 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.2s forwards;
+        }
+
+        @keyframes progress {
+            0% { stroke-dasharray: 0 100; }
+            100% { stroke-dasharray: 100 0; }
+        }
+
+        @keyframes stroke-success {
+            100% { stroke-dashoffset: 0; }
+        }
+
+        @keyframes scale-success {
+            0%, 100% { transform: none; }
+            50% { transform: scale3d(1.1, 1.1, 1); }
+        }
+
+        @keyframes fill-success {
+            100% { box-shadow: inset 0px 0px 0px 30px var(--success-color); }
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        /* Tailwind overrides for consistency */
+        input:focus {
+            outline: none;
+            ring: 2px;
+            ring-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        button:hover {
+            background-opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container" id="loginContainer">
+        <h3 class="welcome-note text-lg font-semibold text-center text-gray-800 mb-4">
+            Welcome to the Medical Imaging Dashboard
+        </h3>
+        <form id="loginForm" class="space-y-4">
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6"><i class="fas fa-user-lock mr-2"></i>Login</h2>
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]"
+                    placeholder="Enter your username"
+                    required
+                />
+            </div>
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)]"
+                    placeholder="Enter your password"
+                    required
+                />
+            </div>
+            <div class="flex items-center">
+                <input
+                    type="checkbox"
+                    id="rememberMe"
+                    name="rememberMe"
+                    class="h-4 w-4 text-[var(--primary-color)] focus:ring-[var(--primary-color)] border-gray-300 rounded"
+                />
+                <label for="rememberMe" class="ml-2 block text-sm text-gray-700">Remember Me</label>
+            </div>
+            <div id="errorMessage" class="error-message"></div>
+            <button
+                type="submit"
+                class="w-full bg-[var(--primary-color)] text-white py-2 px-4 rounded-md hover:bg-opacity-90 focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-offset-2"
+            >
+                Sign In
+            </button>
+            <p class="text-center text-sm text-gray-600 mt-4">
+                <a href="#" class="form-toggle" id="forgotPassword">Forgot Password?</a>
+            </p>
+        </form>
+        <div class="progress-animation" id="progressAnimation">
+            <svg class="progress-circle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
+                <circle cx="30" cy="30" r="25" fill="none"/>
+            </svg>
+            <svg class="success-circle" id="successCircle" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                <circle cx="26" cy="26" r="25" fill="none"/>
+                <path class="success-check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+            </svg>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('loginForm');
+            const errorMessage = document.getElementById('errorMessage');
+            const loginContainer = document.getElementById('loginContainer');
+            const progressAnimation = document.getElementById('progressAnimation');
+            const successCircle = document.getElementById('successCircle');
+
+            loginForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const username = document.getElementById('username').value.trim();
+                const password = document.getElementById('password').value.trim();
+                const rememberMe = document.getElementById('rememberMe').checked;
+
+                // Reset error message
+                errorMessage.style.display = 'none';
+                errorMessage.textContent = '';
+
+                // Basic validation
+                if (!username || !password) {
+                    errorMessage.textContent = 'Please fill in both username and password.';
+                    errorMessage.style.display = 'block';
+                    return;
+                }
+
+                try {
+                    // Trigger slide-up animation
+                    loginContainer.classList.add('slide-up');
+                    setTimeout(() => {
+                        progressAnimation.style.display = 'block';
+                    }, 500);
+
+                    // Call backend authentication
+                    const response = await fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username, password })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        // Transition to success state
+                        progressAnimation.style.display = 'none';
+                        successCircle.style.display = 'block';
+
+                        // Wait for success animation
+                        await new Promise(resolve => setTimeout(resolve, 500));
+
+                        // Store token and redirect
+                        const storage = rememberMe ? localStorage : sessionStorage;
+                        storage.setItem('token', data.token);
+                        window.location.href = '/index.html';
+                    } else {
+                        // Reset animation on error
+                        loginContainer.classList.remove('slide-up');
+                        progressAnimation.style.display = 'none';
+                        successCircle.style.display = 'none';
+                        const error = await response.json();
+                        errorMessage.textContent = error.message || 'Invalid username or password.';
+                        errorMessage.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    // Reset animation on error
+                    loginContainer.classList.remove('slide-up');
+                    progressAnimation.style.display = 'none';
+                    successCircle.style.display = 'none';
+                    errorMessage.textContent = 'An error occurred. Please try again.';
+                    errorMessage.style.display = 'block';
+                }
+            });
+
+            // Placeholder for forgot password
+            document.getElementById('forgotPassword').addEventListener('click', (event) => {
+                event.preventDefault();
+                alert('Forgot Password feature is not implemented yet.');
+            });
+        });
+    </script>
+</body>
+</html>

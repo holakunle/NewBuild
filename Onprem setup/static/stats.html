@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistics - Medical Imaging Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #f0f2f5; color: #333; display: flex; height: 100vh; overflow: hidden; }
+        .sidebar {
+            width: 250px; background: #2c3e50; color: white; padding: 60px 20px 20px; height: 100vh; position: fixed; top: 0; left: 0; transition: width 0.3s ease; z-index: 1000; overflow-y: auto;
+        }
+        .sidebar::-webkit-scrollbar { width: 8px; }
+        .sidebar::-webkit-scrollbar-thumb { background: #34495e; border-radius: 4px; }
+        .sidebar::-webkit-scrollbar-thumb:hover { background: #3d566e; }
+        .sidebar.minimized { width: 60px; padding: 50px 10px 10px; }
+        .toggle-sidebar-btn {
+            background: #2c3e50; border: none; color: white; font-size: 18px; cursor: pointer; padding: 10px; border-radius: 0; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; position: absolute; top: 10px; right: 10px; z-index: 1001; transition: background 0.3s ease;
+        }
+        .toggle-sidebar-btn:hover { background: #34495e; }
+        .sidebar.minimized .toggle-sidebar-btn { top: 5px; right: 5px; padding: 8px; width: 35px; height: 35px; }
+        .profile { display: flex; align-items: center; margin-bottom: 30px; }
+        .sidebar.minimized .profile { flex-direction: column; align-items: center; margin-bottom: 10px; }
+        .profile-img { width: 40px; height: 40px; border-radius: 50%; background: #ddd; margin-right: 15px; object-fit: cover; }
+        .sidebar.minimized .profile-img { margin-right: 0; margin-bottom: 10px; }
+        .profile-name { font-size: 18px; font-weight: 600; }
+        .sidebar.minimized .profile-name { display: none; }
+        .menu-item { padding: 15px 10px; margin: 10px 0; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: flex; align-items: center; position: relative; }
+        .sidebar.minimized .menu-item { justify-content: center; padding: 10px; }
+        .menu-item:hover { background: #34495e; }
+        .menu-item.active { background: #34495e; }
+        .menu-item i { margin-right: 10px; width: 20px; text-align: center; }
+        .sidebar.minimized .menu-item i { margin-right: 0; }
+        .menu-item span:not(.badge) { flex: 1; }
+        .sidebar.minimized .menu-item span:not(.badge) { display: none; }
+        .sidebar.minimized .menu-item:hover span:not(.badge) {
+            display: block; position: absolute; left: 70px; background: #34495e; color: white; padding: 8px 12px; border-radius: 4px; font-size: 14px; white-space: nowrap; z-index: 1002; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .badge { position: absolute; right: 10px; background: #e74c3c; color: white; border-radius: 12px; padding: 2px 8px; font-size: 12px; }
+        .sidebar.minimized .badge { right: 5px; font-size: 10px; padding: 1px 5px; display: block; }
+        .dropdown { position: relative; }
+        .dropdown-content { display: none; position: absolute; left: 100%; top: 0; background: #34495e; min-width: 160px; border-radius: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 1; }
+        .sidebar.minimized .dropdown-content { left: 60px; }
+        .dropdown:hover .dropdown-content { display: block; }
+        .dropdown-item { padding: 10px 15px; color: white; text-decoration: none; display: block; }
+        .dropdown-item:hover { background: #3d566e; }
+        .main-content { margin-left: 250px; padding: 40px; width: calc(100% - 250px); overflow-y: auto; transition: margin-left 0.3s ease, width 0.3s ease; }
+        .main-content.minimized { margin-left: 60px; width: calc(100% - 60px); }
+        .header { font-size: 28px; margin-bottom: 20px; color: #2c3e50; display: flex; align-items: center; }
+        .header i { margin-right: 10px; color: #3498db; }
+        .header .back-btn { margin-left: auto; background: #e67e22; padding: 8px 16px; font-size: 14px; }
+        .header .back-btn:hover { background: #d35400; }
+        .filters { margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { margin-bottom: 5px; color: #2c3e50; font-weight: 500; }
+        .form-group input, .form-group select { padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 200px; }
+        .form-group input:focus, .form-group select:focus { border-color: #3498db; outline: none; }
+        .filter-buttons { display: flex; gap: 10px; align-self: flex-end; }
+        button { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; transition: background 0.3s; font-weight: 500; }
+        button:hover { background: #2980b9; }
+        button.reset-btn { background: #e74c3c; }
+        button.reset-btn:hover { background: #c0392b; }
+        .kpi-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .kpi-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
+        .kpi-card h3 { font-size: 16px; color: #2c3e50; margin-bottom: 10px; }
+        .kpi-card p { font-size: 24px; font-weight: 600; color: #3498db; }
+        .stats-container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
+        .stats-container.loading::after {
+            content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border: 4px solid #ddd; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+        .chart-container { margin-bottom: 30px; }
+        .chart-container h3 { color: #2c3e50; margin-bottom: 10px; }
+        canvas { max-width: 100%; }
+        .table-container { margin-top: 20px; }
+        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .table-header h3 { color: #2c3e50; }
+        .export-btn { background: #2ecc71; }
+        .export-btn:hover { background: #27ae60; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f9f9f9; color: #2c3e50; font-weight: 600; cursor: pointer; }
+        th.sortable:hover { background: #e9ecef; }
+        tr:hover { background: #f5f5f5; }
+        .error-message { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 4px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .error-message button { background: #dc3545; padding: 5px 10px; }
+        .error-message button:hover { background: #c82333; }
+        .no-data { color: #666; font-style: italic; text-align: center; padding: 20px; }
+        @media print {
+            .sidebar, .header, .filters, .no-print, .kpi-container { display: none; }
+            .main-content { margin-left: 0; width: 100%; padding: 20px; }
+            .stats-container { box-shadow: none; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <button class="toggle-sidebar-btn" id="toggleSidebarBtn"><i class="fas fa-bars"></i></button>
+        <div class="profile">
+            <img src="./Guests/profile-placeholder.jpg" alt="Profile" class="profile-img" id="profilePic">
+            <span class="profile-name" id="userName">User Name</span>
+        </div>
+        <div class="menu-item" id="menuMails"><i class="fas fa-envelope"></i> <span>Mails</span> <span class="badge" id="mailCount">0</span></div>
+        <div class="menu-item" id="menuRecentStudies"><i class="fas fa-clock"></i> <span>Recent Studies</span> <span class="badge" id="recentCount">0</span></div>
+        <div class="menu-item" id="menuAssignedStudies"><i class="fas fa-tasks"></i> <span>Assigned Studies</span> <span class="badge" id="assignedCount">0</span></div>
+        <div class="menu-item" id="menuDatabase"><i class="fas fa-database"></i> <span>View Entire Database</span></div>
+        <div class="menu-item" id="menuSearchStudies"><i class="fas fa-search"></i> <span>Search Studies</span></div>
+        <div class="menu-item" id="menuCreateReport"><i class="fas fa-file-alt"></i> <span>Create a Report</span></div>
+        <div class="menu-item active" id="menuStatistics"><i class="fas fa-chart-bar"></i> <span>View Statistics</span></div>
+        <div class="menu-item" id="menuAskAI"><i class="fas fa-robot"></i> <span>Ask AI</span></div>
+        <div class="menu-item" id="menuSettings"><i class="fas fa-cog"></i> <span>Settings</span></div>
+        <div class="menu-item" id="menuBackToDashboard"><i class="fas fa-home"></i> <span>Back to Dashboard</span></div>
+        <div class="menu-item" id="menuLogout"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></div>
+    </div>
+    <div class="main-content" id="mainContent">
+        <div class="header">
+            <i class="fas fa-chart-bar"></i> Statistics
+            <button class="back-btn no-print" onclick="window.location.href='/index.html'">Back to Dashboard</button>
+        </div>
+        <div class="filters">
+            <div class="form-group">
+                <label for="dateFrom">Date From</label>
+                <input type="date" id="dateFrom" aria-label="Select Date From">
+            </div>
+            <div class="form-group">
+                <label for="dateTo">Date To</label>
+                <input type="date" id="dateTo" aria-label="Select Date To">
+            </div>
+            <div class="form-group">
+                <label for="user">User</label>
+                <select id="user" aria-label="Select User">
+                    <option value="">All Users</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="modality">Modality</label>
+                <select id="modality" aria-label="Select Modality">
+                    <option value="">All Modalities</option>
+                    <option value="CT">CT</option>
+                    <option value="MR">MR</option>
+                    <option value="XR">X-Ray</option>
+                    <option value="US">Ultrasound</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="ageMin">Age Min</label>
+                <input type="number" id="ageMin" min="0" max="150" aria-label="Select Minimum Age">
+            </div>
+            <div class="form-group">
+                <label for="ageMax">Age Max</label>
+                <input type="number" id="ageMax" min="0" max="150" aria-label="Select Maximum Age">
+            </div>
+            <div class="form-group">
+                <label for="gender">Gender</label>
+                <select id="gender" aria-label="Select Gender">
+                    <option value="">All Genders</option>
+                    <option value="M">Male</option>
+                    <option value="F">Female</option>
+                    <option value="O">Other</option>
+                </select>
+            </div>
+            <div class="filter-buttons">
+                <button onclick="fetchStatistics()">Apply Filters</button>
+                <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
+            </div>
+        </div>
+        <div class="kpi-container">
+            <div class="kpi-card">
+                <h3>Total Studies</h3>
+                <p id="totalStudies">0</p>
+            </div>
+            <div class="kpi-card">
+                <h3>Reported Studies</h3>
+                <p id="reportedPercentage">0%</p>
+            </div>
+            <div class="kpi-card">
+                <h3>Most Active User</h3>
+                <p id="mostActiveUser">-</p>
+            </div>
+        </div>
+        <div class="stats-container" id="statsContainer">
+            <div class="error-message" id="errorMessage" style="display: none;">
+                Failed to load statistics. <button onclick="fetchStatistics()">Retry</button>
+            </div>
+            <div class="chart-container">
+                <h3>Study Distribution by Description</h3>
+                <canvas id="studyChart" aria-label="Study Distribution by Description Chart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>Modality Distribution</h3>
+                <canvas id="modalityChart" aria-label="Modality Distribution Chart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h3>User Assignments</h3>
+                <canvas id="userChart" aria-label="User Assignments Chart"></canvas>
+            </div>
+            <div class="table-container">
+                <div class="table-header">
+                    <h3>Filtered Studies</h3>
+                    <button class="export-btn no-print" onclick="exportToCSV()">Export to CSV</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Study Description</th>
+                            <th>Patient Name</th>
+                            <th class="sortable" onclick="sortTableByDate()">Study Date <i class="fas fa-sort"></i></th>
+                            <th>Modalities</th>
+                            <th>Age</th>
+                            <th>Gender</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studiesTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            let userPermissions = [];
+            let studyChart, userChart, modalityChart;
+            let filteredStudies = [];
+            const colorPalette = ['#3498db', '#e74c3c', '#2ecc71', '#f1c40f', '#9b59b6', '#34495e'];
+
+            async function initialize() {
+                const decodedToken = parseJwt(token);
+                document.getElementById('userName').textContent = decodedToken.username;
+                document.getElementById('profilePic').src = './Guests/profile-placeholder.jpg';
+
+                // Set default date range
+                const today = new Date('2025-05-17');
+                const thirtyDaysAgo = new Date(today);
+                thirtyDaysAgo.setDate(today.getDate() - 30);
+                document.getElementById('dateFrom').value = thirtyDaysAgo.toISOString().split('T')[0];
+                document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+
+                // Fetch user permissions
+                try {
+                    const response = await fetch('/api/users', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (response.ok) {
+                        const users = await response.json();
+                        userPermissions = users.find(u => u.id === decodedToken.userId)?.permissions || [];
+                    }
+                    updateMenuVisibility();
+                } catch (error) {
+                    console.error('Fetch users error:', error);
+                }
+
+                // Populate users
+                try {
+                    const response = await fetch('/api/users', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (response.ok) {
+                        const users = await response.json();
+                        const userSelect = document.getElementById('user');
+                        userSelect.innerHTML = '<option value="">All Users</option>' + 
+                            users.map(u => `<option value="${u.username}">${u.username}</option>`).join('');
+                    }
+                } catch (error) {
+                    console.error('Fetch users error:', error);
+                }
+
+                // Initialize charts
+                studyChart = new Chart(document.getElementById('studyChart'), {
+                    type: 'bar',
+                    data: { labels: [], datasets: [{ label: 'Studies', data: [], backgroundColor: colorPalette[0] }] },
+                    options: {
+                        scales: { y: { beginAtZero: true } },
+                        plugins: {
+                            tooltip: { enabled: true },
+                            legend: { display: true }
+                        }
+                    }
+                });
+
+                modalityChart = new Chart(document.getElementById('modalityChart'), {
+                    type: 'pie',
+                    data: { labels: [], datasets: [{ label: 'Modalities', data: [], backgroundColor: colorPalette }] },
+                    options: {
+                        plugins: {
+                            tooltip: { enabled: true },
+                            legend: { position: 'right' }
+                        }
+                    }
+                });
+
+                userChart = new Chart(document.getElementById('userChart'), {
+                    type: 'bar',
+                    data: { labels: [], datasets: [] },
+                    options: {
+                        scales: { y: { beginAtZero: true } },
+                        plugins: {
+                            tooltip: { enabled: true },
+                            legend: { display: true }
+                        }
+                    }
+                });
+
+                // Load initial statistics
+                await fetchStatistics();
+            }
+
+            function parseJwt(token) {
+                try {
+                    const base64Url = token.split('.')[1];
+                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                    return JSON.parse(jsonPayload);
+                } catch (e) {
+                    return {};
+                }
+            }
+
+            function toggleSidebar() {
+                document.getElementById('sidebar').classList.toggle('minimized');
+                document.getElementById('mainContent').classList.toggle('minimized');
+            }
+
+            async function fetchStatistics() {
+                const statsContainer = document.getElementById('statsContainer');
+                const errorMessage = document.getElementById('errorMessage');
+                statsContainer.classList.add('loading');
+                errorMessage.style.display = 'none';
+
+                const dateFrom = document.getElementById('dateFrom').value;
+                const dateTo = document.getElementById('dateTo').value;
+                const user = document.getElementById('user').value;
+                const modality = document.getElementById('modality').value;
+                const ageMin = document.getElementById('ageMin').value;
+                const ageMax = document.getElementById('ageMax').value;
+                const gender = document.getElementById('gender').value;
+
+                // Construct query parameters
+                const params = new URLSearchParams();
+                if (dateFrom) params.append('dateFrom', dateFrom);
+                if (dateTo) params.append('dateTo', dateTo);
+                if (user) params.append('user', user);
+                if (modality) params.append('modality', modality);
+                if (ageMin) params.append('ageMin', ageMin);
+                if (ageMax) params.append('ageMax', ageMax);
+                if (gender) params.append('gender', gender);
+
+                try {
+                    const response = await fetch(`/api/statistics?${params.toString()}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const stats = await response.json();
+
+                    // Update KPIs
+                    document.getElementById('totalStudies').textContent = stats.kpis.totalStudies;
+                    document.getElementById('reportedPercentage').textContent = `${stats.kpis.reportedPercentage}%`;
+                    document.getElementById('mostActiveUser').textContent = stats.kpis.mostActiveUser;
+
+                    // Update study chart
+                    studyChart.data.labels = stats.studyChart.labels;
+                    studyChart.data.datasets[0].data = stats.studyChart.data;
+                    studyChart.update();
+
+                    // Update modality chart
+                    modalityChart.data.labels = stats.modalityChart.labels;
+                    modalityChart.data.datasets[0].data = stats.modalityChart.data;
+                    modalityChart.update();
+
+                    // Update user chart
+                    userChart.data.labels = stats.userChart.labels;
+                    userChart.data.datasets = stats.userChart.datasets.map((dataset, index) => ({
+                        ...dataset,
+                        backgroundColor: colorPalette[index % colorPalette.length]
+                    }));
+                    userChart.update();
+
+                    // Update filtered studies
+                    filteredStudies = stats.filteredStudies;
+
+                    // Update studies table
+                    const tableBody = document.getElementById('studiesTable');
+                    tableBody.innerHTML = filteredStudies.length === 0
+                        ? '<tr><td colspan="7" class="no-data">No studies found. Try adjusting the date range or filters.</td></tr>'
+                        : filteredStudies.map(study => `
+                            <tr>
+                                <td>${study.StudyDescription}</td>
+                                <td>${study.PatientName}</td>
+                                <td>${study.StudyDate}</td>
+                                <td>${study.ModalitiesInStudy}</td>
+                                <td>${study.Age}</td>
+                                <td>${study.Gender}</td>
+                                <td>${study.Status}</td>
+                            </tr>
+                        `).join('');
+                } catch (error) {
+                    console.error('Fetch statistics error:', error);
+                    errorMessage.style.display = 'flex';
+                } finally {
+                    statsContainer.classList.remove('loading');
+                }
+            }
+
+            function resetFilters() {
+                const today = new Date('2025-05-17');
+                const thirtyDaysAgo = new Date(today);
+                thirtyDaysAgo.setDate(today.getDate() - 30);
+                document.getElementById('dateFrom').value = thirtyDaysAgo.toISOString().split('T')[0];
+                document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+                document.getElementById('user').value = '';
+                document.getElementById('modality').value = '';
+                document.getElementById('ageMin').value = '';
+                document.getElementById('ageMax').value = '';
+                document.getElementById('gender').value = '';
+                fetchStatistics();
+            }
+
+            function sortTableByDate() {
+                const sortedStudies = [...filteredStudies].sort((a, b) => {
+                    const dateA = a.StudyDate ? new Date(a.StudyDate) : new Date(0);
+                    const dateB = b.StudyDate ? new Date(b.StudyDate) : new Date(0);
+                    return dateA - dateB;
+                });
+                filteredStudies = sortedStudies;
+                renderTable();
+            }
+
+            function renderTable() {
+                const tableBody = document.getElementById('studiesTable');
+                tableBody.innerHTML = filteredStudies.length === 0
+                    ? '<tr><td colspan="7" class="no-data">No studies found. Try adjusting the date range or filters.</td></tr>'
+                    : filteredStudies.map(study => `
+                        <tr>
+                            <td>${study.StudyDescription}</td>
+                            <td>${study.PatientName}</td>
+                            <td>${study.StudyDate}</td>
+                            <td>${study.ModalitiesInStudy}</td>
+                            <td>${study.Age}</td>
+                            <td>${study.Gender}</td>
+                            <td>${study.Status}</td>
+                        </tr>
+                    `).join('');
+            }
+
+            function exportToCSV() {
+                if (filteredStudies.length === 0) {
+                    alert('No data to export.');
+                    return;
+                }
+                const headers = ['Study Description', 'Patient Name', 'Study Date', 'Modalities', 'Age', 'Gender', 'Status'];
+                const rows = filteredStudies.map(study => [
+                    study.StudyDescription,
+                    study.PatientName,
+                    study.StudyDate,
+                    study.ModalitiesInStudy,
+                    study.Age,
+                    study.Gender,
+                    study.Status
+                ]);
+                const csvContent = [
+                    headers.join(','),
+                    ...rows.map(row => row.join(','))
+                ].join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'filtered_studies.csv';
+                link.click();
+            }
+
+            async function logout() {
+                try {
+                    await fetch('/api/auth/logout', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    localStorage.removeItem('token');
+                    sessionStorage.removeItem('token');
+                    window.location.href = '/login.html';
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    window.location.href = '/login.html';
+                }
+            }
+
+            function updateMenuVisibility() {
+                if (!userPermissions.includes('search_studies')) {
+                    document.getElementById('menuRecentStudies').style.display = 'none';
+                    document.getElementById('menuSearchStudies').style.display = 'none';
+                    document.getElementById('menuDatabase').style.display = 'none';
+                }
+                if (!userPermissions.includes('assign_studies')) {
+                    document.getElementById('menuAssignedStudies').style.display = 'none';
+                }
+                if (!userPermissions.includes('view_reports')) {
+                    document.getElementById('menuCreateReport').style.display = 'none';
+                }
+                if (!userPermissions.includes('view_statistics')) {
+                    document.getElementById('menuStatistics').style.display = 'none';
+                }
+                if (!userPermissions.includes('manage_users')) {
+                    document.getElementById('menuSettings').style.display = 'none';
+                }
+                if (!userPermissions.includes('view_mails')) {
+                    document.getElementById('menuMails').style.display = 'none';
+                    document.querySelector('.dropdown-item[data-share-tab="email"]').style.display = 'none';
+                }
+            }
+
+            // Event Listeners
+            document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
+            document.getElementById('menuMails').addEventListener('click', () => window.location.href = '/email.html?section=inbox');
+            document.getElementById('menuRecentStudies').addEventListener('click', () => window.location.href = '/index.html#recent');
+            document.getElementById('menuAssignedStudies').addEventListener('click', () => window.location.href = '/index.html#assigned');
+            document.getElementById('menuDatabase').addEventListener('click', () => window.location.href = '/orthanc/ui/app/index.html');
+            document.getElementById('menuSearchStudies').addEventListener('click', () => window.location.href = '/index.html#search');
+            document.getElementById('menuCreateReport').addEventListener('click', () => window.location.href = '/report.html');
+            document.getElementById('menuStatistics').addEventListener('click', () => window.location.href = '/stats.html');
+            document.getElementById('menuAskAI').addEventListener('click', () => alert('Ask AI feature not implemented.'));
+            document.getElementById('menuSettings').addEventListener('click', () => window.location.href = '/index.html#settings');
+            document.getElementById('menuLogout').addEventListener('click', logout);
+            document.getElementById('menuBackToDashboard').addEventListener('click', () => window.location.href = '/index.html');
+            document.querySelector('.dropdown-item[data-share-tab="email"]').addEventListener('click', () => window.location.href = '/email.html?section=newMail');
+            document.querySelector('.dropdown-item[data-share-tab="local"]').addEventListener('click', () => alert('Local sharing not implemented.'));
+
+            // Initialize
+            initialize();
+        });
+    </script>
+</body>
+</html>

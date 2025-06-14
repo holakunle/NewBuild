@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Study Assignments</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f0f2f5;
+            color: #333;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Styling (Consistent with index.html) */
+        .sidebar {
+            width: 250px;
+            background: #2c3e50;
+            color: white;
+            padding: 60px 20px 20px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            transition: width 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar.minimized {
+            width: 60px;
+            padding: 50px 10px 10px;
+        }
+
+        .toggle-sidebar-btn {
+            background: #2c3e50;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 0;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1001;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-sidebar-btn:hover {
+            background: #34495e;
+        }
+
+        .sidebar.minimized .toggle-sidebar-btn {
+            top: 5px;
+            right: 5px;
+            padding: 8px;
+            width: 35px;
+            height: 35px;
+        }
+
+        .profile {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .sidebar.minimized .profile {
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .profile-img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #ddd;
+            margin-right: 15px;
+            object-fit: cover;
+        }
+
+        .sidebar.minimized .profile-img {
+            margin-right: 0;
+            margin-bottom: 10px;
+        }
+
+        .profile-name {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .sidebar.minimized .profile-name {
+            display: none;
+        }
+
+        .menu-item {
+            padding: 15px 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        .sidebar.minimized .menu-item {
+            justify-content: center;
+            padding: 10px;
+        }
+
+        .menu-item:hover {
+            background: #34495e;
+        }
+
+        .menu-item.active {
+            background: #34495e;
+        }
+
+        .menu-item i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .sidebar.minimized .menu-item i {
+            margin-right: 0;
+        }
+
+        .menu-item span:not(.badge) {
+            flex: 1;
+        }
+
+        .sidebar.minimized .menu-item span:not(.badge) {
+            display: none;
+        }
+
+        .sidebar.minimized .menu-item:hover span:not(.badge) {
+            display: block;
+            position: absolute;
+            left: 70px;
+            background: #34495e;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            white-space: nowrap;
+            z-index: 1002;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Main Content Styling */
+        .main-content {
+            margin-left: 250px;
+            padding: 40px;
+            width: calc(100% - 250px);
+            overflow-y: auto;
+            transition: margin-left 0.3s ease, width 0.3s ease;
+        }
+
+        .main-content.minimized {
+            margin-left: 60px;
+            width: calc(100% - 60px);
+        }
+
+        .page-title {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .refresh-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+
+        .refresh-btn:hover {
+            background: #2980b9;
+        }
+
+        .search-bar {
+            width: 100%;
+            max-width: 300px;
+            padding: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        /* Dashboard Grid */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .panel:hover {
+            transform: translateY(-5px);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .panel-title {
+            font-size: 20px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .sort-btn {
+            background: none;
+            border: none;
+            color: #3498db;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 5px;
+            transition: color 0.3s;
+        }
+
+        .sort-btn:hover {
+            color: #2980b9;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .filter-group select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .tiles-container {
+            max-height: 450px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .tiles-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .tiles-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .tiles-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .tile {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 15px;
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .tile.new {
+            background: #fff8e1;
+        }
+
+        .tile:hover {
+            background: #f8f9fa;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .tile-details {
+            flex: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .tile-field {
+            font-size: 14px;
+            color: #263238;
+        }
+
+        .tile-field label {
+            font-weight: 600;
+            color: #0d47a1;
+            margin-right: 5px;
+        }
+
+        .tile-field.assigned-to span,
+        .tile-field.assigned-by span {
+            font-weight: 700;
+            color: #d32f2f;
+        }
+
+        .tile.assigned-to-me .tile-field.assigned-to span {
+            animation: flash 1.5s infinite;
+            font-weight: 900;
+            color: #d32f2f;
+        }
+
+        @keyframes flash {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+
+        .tile-field.completion span {
+            font-weight: 600;
+            color: #4caf50;
+        }
+
+        .tile-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .action-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-btn:hover {
+            background: #2980b9;
+            transform: scale(1.05);
+        }
+
+        .action-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .action-btn.reassign-btn {
+            background: #f39c12;
+        }
+
+        .action-btn.reassign-btn:hover {
+            background: #e67e22;
+        }
+
+        .action-btn.unassign-btn {
+            background: #e74c3c;
+        }
+
+        .action-btn.unassign-btn:hover {
+            background: #c0392b;
+        }
+
+        .action-btn.open-study-btn {
+            background: #2ecc71;
+        }
+
+        .action-btn.open-study-btn:hover {
+            background: #27ae60;
+        }
+
+        .action-btn.single-assign-btn {
+            background: #9b59b6;
+        }
+
+        .action-btn.single-assign-btn:hover {
+            background: #8e44ad;
+        }
+
+        /* Summary Tile */
+        .summary-tile {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            text-align: center;
+            padding: 25px;
+            border-radius: 12px;
+        }
+
+        .summary-tile h3 {
+            font-size: 22px;
+            color: #1a237e;
+            margin-bottom: 15px;
+        }
+
+        .summary-tile p {
+            font-size: 18px;
+            color: #263238;
+            font-weight: 500;
+            margin: 5px 0;
+        }
+
+        .summary-tile .last-updated {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        /* Status Indicators */
+        .study-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .status-icon {
+            font-size: 14px;
+            position: relative;
+        }
+
+        .status-icon[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .status-pending { color: #f39c12; }
+        .status-in-progress { color: #2196f3; }
+        .status-completed { color: #4caf50; }
+
+        /* Modal Styling */
+        .assign-modal, .reassign-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .assign-modal.active, .reassign-modal.active {
+            display: block;
+        }
+
+        .assign-modal h3, .reassign-modal h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-size: 20px;
+        }
+
+        .modal-content {
+            margin-bottom: 20px;
+            min-height: 50px; /* Ensure space for success message */
+        }
+
+        .modal-content p {
+            margin: 5px 0;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .user-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 5px;
+        }
+
+        .user-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .user-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .user-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .user-category {
+            margin-bottom: 20px;
+        }
+
+        .user-category h4 {
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        .category-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .category-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .category-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .category-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .user-item {
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-item:hover {
+            background: #f0f2f5;
+        }
+
+        .user-item.selected {
+            background: #3498db;
+            color: white;
+        }
+
+        .user-item i {
+            font-size: 16px;
+        }
+
+        .status-indicator {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            background: #ccc;
+            color: white;
+        }
+
+        .status-indicator.active {
+            background: #4caf50;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            cursor: pointer;
+            font-size: 20px;
+            color: #666;
+            background: none;
+            border: none;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* Success Message in Modal */
+        .assign-modal .modal-content .success-message {
+            display: none;
+            color: #4caf50 !important;
+            font-weight: 600 !important;
+            margin-top: 10px !important;
+            text-align: center !important;
+            background-color: #e8f5e9 !important;
+            padding: 10px !important;
+            border-radius: 4px !important;
+            z-index: 1001 !important;
+        }
+
+        .assign-modal .modal-content .success-message.visible {
+            display: block !important;
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        .loading-spinner::after {
+            content: '';
+            width: 30px;
+            height: 30px;
+            border: 4px solid #ffffff;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 60px;
+                padding: 50px 10px 10px;
+            }
+
+            .main-content {
+                margin-left: 60px;
+                width: calc(100% - 60px);
+                padding: 20px;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tiles-container {
+                max-height: 350px;
+            }
+
+            .search-bar {
+                max-width: 100%;
+            }
+
+            .page-title .refresh-btn {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar (Consistent with index.html) -->
+    <div class="sidebar" id="sidebar">
+        <button class="toggle-sidebar-btn" id="toggleSidebarBtn"><i class="fas fa-bars"></i></button>
+        <div class="profile">
+            <img src="./Guests/profile-placeholder.jpg" alt="Profile" class="profile-img" id="profilePic">
+            <span class="profile-name" id="userName">Loading...</span>
+        </div>
+        <div id="sidebarMenu">
+            <div class="menu-item" id="menuDashboard"><i class="fas fa-home"></i><span>Dashboard</span></div>
+            <div class="menu-item active" id="menuAssignments"><i class="fas fa-tasks"></i><span>Manage Assignments</span></div>
+            <div class="menu-item" id="menuLogout"><i class="fas fa-sign-out-alt"></i><span>Logout</span></div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <div class="page-title">
+            <span>Manage Study Assignments</span>
+            <div>
+                <button class="refresh-btn" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
+        </div>
+        <input type="text" class="search-bar" id="searchBar" placeholder="Search by Patient Name or PID...">
+
+        <div class="dashboard-grid">
+            <!-- Summary Panel -->
+            <div class="panel summary-tile">
+                <h3>Assignment Summary</h3>
+                <p><strong>Unassigned:</strong> <span id="unassignedCount">0</span> Studies</p>
+                <p><strong>Assigned:</strong> <span id="assignedCount">0</span> Studies</p>
+                <div class="last-updated">Last Updated: 02:32 PM WAT, June 06, 2025</div>
+            </div>
+
+            <!-- Unassigned Studies Panel -->
+            <div class="panel" id="unassignedStudiesSection">
+                <div class="panel-header">
+                    <div class="panel-title">Unassigned Studies</div>
+                    <div class="filter-group">
+                        <select id="unassignedFilter">
+                            <option value="recent">Recent Studies</option>
+                            <option value="all">All Studies</option>
+                        </select>
+                        <button class="action-btn" id="assignSelectedBtn" disabled title="Select studies to assign them to a doctor">Assign Selected</button>
+                        <button class="sort-btn" id="sortUnassignedBtn">Sort by Date</button>
+                    </div>
+                </div>
+                <div class="tiles-container" id="unassignedStudiesList">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+
+            <!-- Assigned Studies Panel -->
+            <div class="panel" id="assignedStudiesSection">
+                <div class="panel-header">
+                    <div class="panel-title">Assigned Studies</div>
+                    <div class="filter-group">
+                        <select id="assignedFilter">
+                            <option value="all">All Assigned</option>
+                            <option value="pending">Pending</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                        <button class="sort-btn" id="sortAssignedBtn">Sort by Date</button>
+                    </div>
+                </div>
+                <div class="tiles-container" id="assignedStudiesList">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assign Modal -->
+    <div class="assign-modal" id="assignModal">
+        <button class="close-modal" id="closeAssignModal">×</button>
+        <h3>Assign Selected Studies</h3>
+        <div class="modal-content" id="assignModalContent">
+            <p>Selected Studies: <span id="selectedStudiesCount">0</span> studies selected</p>
+            <p id="assignSuccessMessage" class="success-message">Assignment successful! Click OK to close.</p>
+        </div>
+        <div class="user-list" id="assignUserList">
+            <div class="loading-spinner"></div>
+        </div>
+        <div class="button-group">
+            <button class="action-btn" id="confirmAssignBtn" disabled>OK</button>
+            <button class="action-btn" id="cancelAssignBtn">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Reassign Modal -->
+    <div class="reassign-modal" id="reassignModal">
+        <button class="close-modal" id="closeReassignModal">×</button>
+        <h3>Reassign Study</h3>
+        <div class="modal-content" id="reassignModalContent">
+            <p>Study: Loading...</p>
+            <p id="reassignSuccessMessage" class="success-message">Reassignment successful! Click OK to close.</p>
+        </div>
+        <div class="user-list" id="reassignUserList">
+            <div class="loading-spinner"></div>
+        </div>
+        <div class="button-group">
+            <button class="action-btn" id="confirmReassignBtn" disabled>OK</button>
+            <button class="action-btn" id="cancelReassignBtn">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // Authentication and API headers
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        let allStudies = [];
+        let assignedStudies = [];
+        let users = [];
+        let currentUser = null;
+        let selectedStudies = new Set();
+        let selectedUser = null;
+        let currentStudyId = null;
+        let sortDirection = 'asc';
+        let canAssignStudies = false;
+        let isAssigning = false; // Flag to prevent multiple submissions
+
+        // Fetch current user and permissions
+        async function fetchCurrentUser() {
+            try {
+                const response = await fetch('/api/current-user', { headers });
+                if (!response.ok) throw new Error('Failed to fetch current user');
+                const user = await response.json();
+                console.log('Fetched user permissions:', user.permissions); // Debug log
+                currentUser = user;
+                canAssignStudies = user.permissions.some(perm => perm.name === 'assign_studies');
+                console.log('canAssignStudies:', canAssignStudies); // Debug log
+                document.getElementById('userName').textContent = user.username || 'User';
+                document.getElementById('assignSelectedBtn').style.display = canAssignStudies ? 'block' : 'none';
+                document.querySelectorAll('.reassign-btn, .unassign-btn, .single-assign-btn').forEach(btn => {
+                    btn.style.display = canAssignStudies ? 'block' : 'none';
+                });
+            } catch (error) {
+                console.error('Error fetching current user:', error);
+                alert('Session expired. Please log in again.');
+                window.location.href = '/login.html';
+            }
+        }
+
+        // Fetch all studies
+        async function fetchAllStudies() {
+            const list = document.getElementById('unassignedStudiesList');
+            list.innerHTML = '<div class="loading-spinner"></div>';
+            try {
+                const response = await fetch('/api/orthanc/studies', { headers });
+                if (!response.ok) throw new Error('Failed to fetch studies');
+                const studies = await response.json();
+                const assignedResponse = await fetch('/api/studies/assigned', { headers });
+                if (!assignedResponse.ok) throw new Error('Failed to fetch assigned studies');
+                const rawAssignedData = await assignedResponse.json();
+                console.log('Raw API response for assigned studies:', rawAssignedData); // Log raw API response
+                const assignedIds = new Set(rawAssignedData.map(s => s.study_id));
+                allStudies = studies
+                    .filter(s => !assignedIds.has(s.id))
+                    .map(s => {
+                        let formattedDate;
+                        if (s.study_date && s.study_date !== "Unknown") {
+                            try {
+                                const year = s.study_date.substring(0, 4);
+                                const month = s.study_date.substring(4, 6);
+                                const day = s.study_date.substring(6, 8);
+                                formattedDate = `${year}-${month}-${day}`;
+                            } catch (e) {
+                                console.error(`Error parsing study_date for study ${s.id}: ${s.study_date}`, e);
+                                formattedDate = new Date().toISOString().split('T')[0];
+                            }
+                        } else {
+                            formattedDate = new Date().toISOString().split('T')[0];
+                        }
+                        return {
+                            id: s.id,
+                            patient_name: s.patient_name,
+                            patient_id: s.patient_id,
+                            study_description: s.study_description || 'N/A',
+                            study_date: formattedDate,
+                            is_new: !s.viewed
+                        };
+                    });
+                renderUnassignedStudies(allStudies, 'recent');
+                // Re-attach event listener after rendering studies
+                attachStudySelectionListener();
+            } catch (error) {
+                console.error('Error fetching studies:', error);
+                list.innerHTML = '<p>Error loading studies. Please try again later.</p>';
+                allStudies = [];
+            }
+        }
+
+        // Fetch assigned studies
+        async function fetchAssignedStudies() {
+            const list = document.getElementById('assignedStudiesList');
+            list.innerHTML = '<div class="loading-spinner"></div>';
+            try {
+                const response = await fetch('/api/studies/assigned', { headers });
+                if (!response.ok) throw new Error('Failed to fetch assigned studies');
+                const rawAssignedData = await response.json();
+                console.log('Raw assigned studies data from API:', rawAssignedData); // Log raw API data
+                // Reset assignedStudies to avoid accumulation
+                assignedStudies = [];
+                // Deduplicate immediately after fetching
+                const uniqueAssignedData = Array.from(new Map(rawAssignedData.map(item => [item.study_id, item])).values());
+                console.log('Deduplicated assigned studies data:', uniqueAssignedData); // Log deduplicated data
+                assignedStudies = uniqueAssignedData.map(s => ({
+                    id: s.study_id,
+                    patient_name: s.patient_name,
+                    patient_id: s.patient_id,
+                    study_description: s.study_description || 'N/A',
+                    assigned_to: s.assigned_to,
+                    assigned_by: s.assigned_by,
+                    assigned_at: s.assigned_on?.split('T')[0] || new Date().toISOString().split('T')[0],
+                    status: s.completion === '100%' ? 'completed' : s.completion === '0%' ? 'pending' : 'in-progress',
+                    completion: s.completion
+                }));
+                console.log('Final assignedStudies array:', assignedStudies); // Log final array
+                renderAssignedStudies(assignedStudies);
+            } catch (error) {
+                console.error('Error fetching assigned studies:', error);
+                list.innerHTML = '<p>Error loading studies. Please try again later.</p>';
+                assignedStudies = [];
+            }
+        }
+
+        // Check if a study is already assigned
+        async function isStudyAssigned(studyId) {
+            try {
+                const response = await fetch('/api/studies/assigned', { headers });
+                if (!response.ok) throw new Error('Failed to fetch assigned studies for check');
+                const assigned = await response.json();
+                return assigned.some(s => s.study_id === studyId);
+            } catch (error) {
+                console.error('Error checking if study is assigned:', error);
+                return false; // Assume not assigned if check fails
+            }
+        }
+
+        // Fetch users for assignment modals
+        async function fetchUsers(modalType) {
+            const userList = document.getElementById(modalType === 'assign' ? 'assignUserList' : 'reassignUserList');
+            userList.innerHTML = '<div class="loading-spinner"></div>';
+            try {
+                const response = await fetch('/api/users', { headers });
+                if (!response.ok) throw new Error('Failed to fetch users');
+                users = await response.json();
+                
+                // Categorize users
+                const activeReporting = users.filter(user => user.is_active && user.is_reporting);
+                const notReporting = users.filter(user => !(user.is_active && user.is_reporting));
+                
+                userList.innerHTML = `
+                    <div class="user-category">
+                        <h4>Active and Currently Reporting</h4>
+                        <div id="${modalType}ActiveReportingUsers" class="category-list"></div>
+                    </div>
+                    <div class="user-category">
+                        <h4>Not Currently Reporting</h4>
+                        <div id="${modalType}NotReportingUsers" class="category-list"></div>
+                    </div>
+                `;
+                
+                // Populate Active and Currently Reporting
+                const activeContainer = document.getElementById(`${modalType}ActiveReportingUsers`);
+                if (activeReporting.length === 0) {
+                    activeContainer.innerHTML = '<p>No active reporting users found.</p>';
+                } else {
+                    activeReporting.forEach(user => {
+                        const userItem = document.createElement('div');
+                        userItem.className = 'user-item';
+                        userItem.dataset.userId = user.id;
+                        userItem.innerHTML = `<i class="fas fa-user"></i><span>${user.username}</span> <span class="status-indicator active">Active</span>`;
+                        activeContainer.appendChild(userItem);
+                    });
+                }
+                
+                // Populate Not Currently Reporting
+                const notReportingContainer = document.getElementById(`${modalType}NotReportingUsers`);
+                if (notReporting.length === 0) {
+                    notReportingContainer.innerHTML = '<p>No users found.</p>';
+                } else {
+                    notReporting.forEach(user => {
+                        const userItem = document.createElement('div');
+                        userItem.className = 'user-item';
+                        userItem.dataset.userId = user.id;
+                        userItem.innerHTML = `<i class="fas fa-user"></i><span>${user.username}</span> <span class="status-indicator">${user.is_active ? 'Active' : 'Inactive'}</span>`;
+                        notReportingContainer.appendChild(userItem);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching users:', error);
+                userList.innerHTML = '<p>Error loading users. Please try again.</p>';
+            }
+        }
+
+        // Render unassigned studies with filter
+        function renderUnassignedStudies(studies, filter = 'recent') {
+            const list = document.getElementById('unassignedStudiesList');
+            list.innerHTML = '';
+            if (studies.length === 0) {
+                list.innerHTML = '<p>No unassigned studies found.</p>';
+                return;
+            }
+            let filteredStudies = [...studies];
+            if (filter === 'recent') {
+                filteredStudies = filteredStudies.filter(s => s.is_new);
+            }
+            filteredStudies.sort((a, b) => (sortDirection === 'asc' ? new Date(a.study_date) - new Date(b.study_date) : new Date(b.study_date) - new Date(a.study_date))).forEach(study => {
+                const tile = document.createElement('div');
+                tile.className = `tile ${study.is_new ? 'new' : ''}`;
+                tile.dataset.studyId = study.id;
+                tile.innerHTML = `
+                    <div class="tile-details">
+                        <input type="checkbox" class="study-checkbox" data-study-id="${study.id}">
+                        <div class="tile-field"><label>Patient Name:</label><span>${study.patient_name || 'N/A'}</span></div>
+                        <div class="tile-field"><label>PID:</label><span>${study.patient_id || 'N/A'}</span></div>
+                        <div class="tile-field"><label>Study Description:</label><span>${study.study_description}</span></div>
+                        <div class="tile-field"><label>Date:</label><span>${study.study_date}</span></div>
+                    </div>
+                    <div class="tile-actions">
+                        <button class="action-btn single-assign-btn" style="display: ${canAssignStudies ? 'block' : 'none'}" data-study-id="${study.id}">Assign</button>
+                    </div>
+                `;
+                list.appendChild(tile);
+            });
+            updateSummary();
+            updateAssignButtonState();
+            attachStudySelectionListener(); // Re-attach listener after rendering
+        }
+
+        // Render assigned studies
+        function renderAssignedStudies(studies) {
+            const list = document.getElementById('assignedStudiesList');
+            list.innerHTML = '';
+            if (studies.length === 0) {
+                list.innerHTML = '<p>No assigned studies found.</p>';
+                return;
+            }
+            // Deduplicate studies based on id before rendering
+            const uniqueStudies = Array.from(new Map(studies.map(item => [item.id, item])).values());
+            console.log('Rendering unique assigned studies:', uniqueStudies); // Log unique studies
+            uniqueStudies.sort((a, b) => (sortDirection === 'asc' ? new Date(a.assigned_at) - new Date(b.assigned_at) : new Date(b.assigned_at) - new Date(a.assigned_at))).forEach(study => {
+                const tile = document.createElement('div');
+                tile.className = `tile ${study.assigned_to === currentUser?.username ? 'assigned-to-me' : ''}`;
+                tile.dataset.studyId = study.id;
+                tile.innerHTML = `
+                    <div class="tile-details">
+                        <div class="tile-field"><label>Patient Name:</label><span>${study.patient_name || 'N/A'}</span></div>
+                        <div class="tile-field"><label>PID:</label><span>${study.patient_id || 'N/A'}</span></div>
+                        <div class="tile-field"><label>Study Description:</label><span>${study.study_description}</span></div>
+                        <div class="tile-field assigned-to"><label>Assigned To:</label><span>${study.assigned_to}</span></div>
+                        <div class="tile-field assigned-by"><label>Assigned By:</label><span>${study.assigned_by}</span></div>
+                        <div class="tile-field"><label>Assigned On:</label><span>${study.assigned_at}</span></div>
+                        <div class="tile-field completion"><label>Completion:</label><span>${study.completion}</span></div>
+                    </div>
+                    <div class="tile-actions">
+                        <button class="action-btn reassign-btn" style="display: ${canAssignStudies ? 'block' : 'none'}">Reassign</button>
+                        <button class="action-btn unassign-btn" style="display: ${canAssignStudies ? 'block' : 'none'}">Unassign</button>
+                        <button class="action-btn open-study-btn">Open Study</button>
+                    </div>
+                    <div class="study-status">
+                        <i class="fas ${study.status === 'pending' ? 'fa-clock' : study.status === 'in-progress' ? 'fa-spinner' : 'fa-check'} status-icon status-${study.status}" title="${study.status.charAt(0).toUpperCase() + study.status.slice(1)}"></i>
+                    </div>
+                `;
+                list.appendChild(tile);
+            });
+            updateSummary();
+        }
+
+        // Update summary
+        function updateSummary() {
+            const unassignedCount = allStudies.length;
+            const assignedCount = assignedStudies.length;
+            document.getElementById('unassignedCount').textContent = unassignedCount;
+            document.getElementById('assignedCount').textContent = assignedCount;
+            console.log('Summary updated - Unassigned:', unassignedCount, 'Assigned:', assignedCount); // Debug log
+            document.querySelector('.last-updated').textContent = `Last Updated: ${new Date().toLocaleString('en-US', { timeZone: 'Africa/Lagos', hour12: true })}`;
+        }
+
+        // Update assign button state
+        function updateAssignButtonState() {
+            const assignSelectedBtn = document.getElementById('assignSelectedBtn');
+            const currentSize = selectedStudies.size;
+            assignSelectedBtn.disabled = currentSize === 0 || isAssigning;
+        }
+
+        // Attach study selection listener
+        function attachStudySelectionListener() {
+            const list = document.getElementById('unassignedStudiesList');
+            list.querySelectorAll('.study-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', (e) => {
+                    const studyId = e.target.dataset.studyId;
+                    console.log('Checkbox changed - studyId:', studyId, 'checked:', e.target.checked); // Debug log
+                    if (e.target.checked) {
+                        selectedStudies.add(studyId);
+                    } else {
+                        selectedStudies.delete(studyId);
+                    }
+                    updateAssignButtonState();
+                    document.getElementById('selectedStudiesCount').textContent = selectedStudies.size;
+                });
+            });
+        }
+
+        // Initialize UI
+        async function initializeUI() {
+            await fetchCurrentUser();
+            await Promise.all([fetchAllStudies(), fetchAssignedStudies()]);
+            attachEventListeners();
+        }
+
+        // Attach event listeners
+        function attachEventListeners() {
+            // Toggle Sidebar
+            document.getElementById('toggleSidebarBtn').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('minimized');
+                document.getElementById('mainContent').classList.toggle('minimized');
+            });
+
+            // Dashboard Navigation
+            document.getElementById('menuDashboard').addEventListener('click', () => {
+                window.location.href = 'index.html';
+            });
+
+            // Logout
+            document.getElementById('menuLogout').addEventListener('click', () => {
+                localStorage.removeItem('token');
+                sessionStorage.removeItem('token');
+                window.location.href = '/login.html';
+            });
+
+            // Refresh Button
+            document.getElementById('refreshBtn').addEventListener('click', async () => {
+                document.getElementById('refreshBtn').innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing...';
+                await Promise.all([fetchAllStudies(), fetchAssignedStudies()]);
+                document.getElementById('refreshBtn').innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+            });
+
+            // Search Bar
+            document.getElementById('searchBar').addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const filter = document.getElementById('unassignedFilter').value;
+                const filteredStudies = allStudies.filter(study =>
+                    (study.patient_name || '').toLowerCase().includes(query) || (study.patient_id || '').toLowerCase().includes(query)
+                );
+                renderUnassignedStudies(filteredStudies, filter);
+            });
+
+            // Single Study Assign Button
+            document.getElementById('unassignedStudiesList').addEventListener('click', (e) => {
+                if (e.target.classList.contains('single-assign-btn')) {
+                    const studyId = e.target.dataset.studyId;
+                    selectedStudies.clear();
+                    selectedStudies.add(studyId);
+                    document.getElementById('selectedStudiesCount').textContent = selectedStudies.size;
+                    updateAssignButtonState();
+                    showAssignModal();
+                }
+            });
+
+            // Assign Selected Button
+            document.getElementById('assignSelectedBtn').addEventListener('click', showAssignModal);
+
+            // Unassigned Filter
+            document.getElementById('unassignedFilter').addEventListener('change', (e) => {
+                const filter = e.target.value;
+                const searchQuery = document.getElementById('searchBar').value.toLowerCase();
+                let filteredStudies = allStudies;
+                if (searchQuery) {
+                    filteredStudies = filteredStudies.filter(study =>
+                        (study.patient_name || '').toLowerCase().includes(searchQuery) || (study.patient_id || '').toLowerCase().includes(searchQuery)
+                    );
+                }
+                renderUnassignedStudies(filteredStudies, filter);
+            });
+
+            // Assigned Filter
+            document.getElementById('assignedFilter').addEventListener('change', (e) => {
+                const filter = e.target.value;
+                let filteredStudies = [...assignedStudies]; // Create a copy to avoid modifying the original array
+                if (filter !== 'all') {
+                    filteredStudies = filteredStudies.filter(study => study.status === filter);
+                }
+                renderAssignedStudies(filteredStudies);
+            });
+
+            // Sort Buttons
+            document.getElementById('sortUnassignedBtn').addEventListener('click', () => {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                document.getElementById('sortUnassignedBtn').textContent = `Sort by Date (${sortDirection})`;
+                const filter = document.getElementById('unassignedFilter').value;
+                const searchQuery = document.getElementById('searchBar').value.toLowerCase();
+                let filteredStudies = allStudies;
+                if (searchQuery) {
+                    filteredStudies = filteredStudies.filter(study =>
+                        (study.patient_name || '').toLowerCase().includes(searchQuery) || (study.patient_id || '').toLowerCase().includes(searchQuery)
+                    );
+                }
+                renderUnassignedStudies(filteredStudies, filter);
+            });
+
+            document.getElementById('sortAssignedBtn').addEventListener('click', () => {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                document.getElementById('sortAssignedBtn').textContent = `Sort by Date (${sortDirection})`;
+                const filter = document.getElementById('assignedFilter').value;
+                const filteredStudies = assignedStudies.filter(study => filter === 'all' || study.status === filter);
+                renderAssignedStudies(filteredStudies);
+            });
+
+            // Reassign, Unassign, and Open Study Buttons
+            document.getElementById('assignedStudiesList').addEventListener('click', async (e) => {
+                const tile = e.target.closest('.tile');
+                if (!tile) return;
+                const studyId = tile.dataset.studyId;
+                if (e.target.classList.contains('reassign-btn')) {
+                    showReassignModal(studyId);
+                } else if (e.target.classList.contains('unassign-btn')) {
+                    await unassignStudy(studyId);
+                } else if (e.target.classList.contains('open-study-btn')) {
+                    await updateStudyStatus(studyId, 'in-progress');
+                    alert(`Opening study ${studyId}... Redirecting to study view.`);
+                    // Redirect to study.html?id=${studyId} or equivalent
+                }
+            });
+
+            // Assign Modal Events
+            const assignModalCloseBtn = document.getElementById('closeAssignModal');
+            if (assignModalCloseBtn) {
+                assignModalCloseBtn.addEventListener('click', closeAssignModal);
+            }
+            const cancelAssignBtn = document.getElementById('cancelAssignBtn');
+            if (cancelAssignBtn) {
+                cancelAssignBtn.addEventListener('click', closeAssignModal);
+            }
+            const confirmAssignBtn = document.getElementById('confirmAssignBtn');
+            if (confirmAssignBtn) {
+                confirmAssignBtn.addEventListener('click', async () => {
+                    const successMessage = document.getElementById('assignSuccessMessage');
+                    if (successMessage && successMessage.classList.contains('visible')) {
+                        closeAssignModal();
+                    } else {
+                        await assignSelectedStudies();
+                    }
+                });
+            }
+            const assignUserList = document.getElementById('assignUserList');
+            if (assignUserList) {
+                assignUserList.addEventListener('click', (e) => {
+                    const userItem = e.target.closest('.user-item');
+                    if (userItem) {
+                        selectUser(userItem.dataset.userId, userItem.querySelector('span').textContent, userItem, 'assign');
+                    }
+                });
+            }
+
+            // Reassign Modal Events
+            const reassignModalCloseBtn = document.getElementById('closeReassignModal');
+            if (reassignModalCloseBtn) {
+                reassignModalCloseBtn.addEventListener('click', closeReassignModal);
+            }
+            const cancelReassignBtn = document.getElementById('cancelReassignBtn');
+            if (cancelReassignBtn) {
+                cancelReassignBtn.addEventListener('click', closeReassignModal);
+            }
+            const confirmReassignBtn = document.getElementById('confirmReassignBtn');
+            if (confirmReassignBtn) {
+                confirmReassignBtn.addEventListener('click', async () => {
+                    console.log('Confirm Reassign clicked, selectedUser:', selectedUser, 'currentStudyId:', currentStudyId); // Debug log
+                    const successMessage = document.getElementById('reassignSuccessMessage');
+                    if (successMessage && successMessage.classList.contains('visible')) {
+                        closeReassignModal();
+                    } else {
+                        await reassignStudy();
+                    }
+                });
+            }
+            const reassignUserList = document.getElementById('reassignUserList');
+            if (reassignUserList) {
+                reassignUserList.addEventListener('click', (e) => {
+                    const userItem = e.target.closest('.user-item');
+                    if (userItem) {
+                        selectUser(userItem.dataset.userId, userItem.querySelector('span').textContent, userItem, 'reassign');
+                    }
+                });
+            }
+        }
+
+        // Show assign modal
+        async function showAssignModal() {
+            if (selectedStudies.size === 0) {
+                alert('No studies selected for assignment.');
+                return;
+            }
+            const modal = document.getElementById('assignModal');
+            const content = document.getElementById('assignModalContent');
+            selectedUser = null;
+            const confirmAssignBtn = document.getElementById('confirmAssignBtn');
+            if (confirmAssignBtn) confirmAssignBtn.disabled = true;
+            const confirmAssignBtnElement = document.getElementById('confirmAssignBtn');
+            if (confirmAssignBtnElement) confirmAssignBtnElement.textContent = 'OK'; // Reset button text
+            const cancelAssignBtn = document.getElementById('cancelAssignBtn');
+            if (cancelAssignBtn) cancelAssignBtn.style.display = 'block'; // Reset cancel button
+            document.getElementById('selectedStudiesCount').textContent = selectedStudies.size;
+            const successMessage = document.getElementById('assignSuccessMessage');
+            if (successMessage) {
+                successMessage.style.display = 'none';
+                successMessage.classList.remove('visible');
+            }
+            await fetchUsers('assign');
+            if (modal) modal.classList.add('active');
+            console.log('Assign modal opened');
+        }
+
+        // Show reassign modal
+        async function showReassignModal(studyId) {
+            const study = assignedStudies.find(s => s.id === studyId);
+            if (!study) return;
+            currentStudyId = studyId;
+            const modal = document.getElementById('reassignModal');
+            const content = document.getElementById('reassignModalContent');
+            selectedUser = null;
+            const confirmReassignBtn = document.getElementById('confirmReassignBtn');
+            if (confirmReassignBtn) confirmReassignBtn.disabled = true;
+            if (content) content.innerHTML = `<p>Study: ${study.patient_name || 'N/A'} - ${study.study_description}</p>`;
+            const successMessage = document.getElementById('reassignSuccessMessage');
+            if (successMessage) {
+                successMessage.style.display = 'none';
+                successMessage.classList.remove('visible');
+            }
+            await fetchUsers('reassign');
+            if (modal) modal.classList.add('active');
+        }
+
+        // Select user in modal
+        function selectUser(userId, userName, userItem, modalType) {
+            selectedUser = { id: userId, name: userName };
+            const userList = document.getElementById(modalType === 'assign' ? 'assignUserList' : 'reassignUserList');
+            if (userList) {
+                userList.querySelectorAll('.user-item').forEach(item => item.classList.remove('selected'));
+                if (userItem) userItem.classList.add('selected');
+            }
+            const confirmBtn = document.getElementById(modalType === 'assign' ? 'confirmAssignBtn' : 'confirmReassignBtn');
+            if (confirmBtn) confirmBtn.disabled = false;
+        }
+
+        // Close assign modal
+        function closeAssignModal() {
+            console.log('Closing assign modal');
+            const modal = document.getElementById('assignModal');
+            if (modal) modal.classList.remove('active');
+            selectedUser = null;
+            const confirmAssignBtn = document.getElementById('confirmAssignBtn');
+            if (confirmAssignBtn) confirmAssignBtn.disabled = true;
+            isAssigning = false; // Reset the flag
+            updateAssignButtonState();
+        }
+
+        // Close reassign modal
+        function closeReassignModal() {
+            const modal = document.getElementById('reassignModal');
+            if (modal) modal.classList.remove('active');
+            selectedUser = null;
+            currentStudyId = null;
+            const confirmReassignBtn = document.getElementById('confirmReassignBtn');
+            if (confirmReassignBtn) confirmReassignBtn.disabled = true;
+        }
+
+        // Assign selected studies
+        async function assignSelectedStudies() {
+            if (!selectedUser) {
+                alert('Please select a user to assign the studies to.');
+                return;
+            }
+            if (isAssigning) {
+                console.log('Assignment already in progress, skipping...');
+                return;
+            }
+            isAssigning = true; // Set the flag to prevent multiple submissions
+            updateAssignButtonState(); // Disable buttons during assignment
+            try {
+                console.log('Starting assignment process for studies:', Array.from(selectedStudies));
+                const studiesToAssign = [];
+                // Check which studies are not already assigned
+                for (const studyId of selectedStudies) {
+                    const alreadyAssigned = await isStudyAssigned(studyId);
+                    if (!alreadyAssigned) {
+                        studiesToAssign.push(studyId);
+                    } else {
+                        console.log(`Study ${studyId} is already assigned, skipping...`);
+                    }
+                }
+                if (studiesToAssign.length === 0) {
+                    alert('All selected studies are already assigned.');
+                    isAssigning = false;
+                    updateAssignButtonState();
+                    return;
+                }
+                // Assign the remaining studies
+                for (const studyId of studiesToAssign) {
+                    const response = await fetch('/api/studies/assign', {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify({ study_id: studyId, assigned_to: selectedUser.name })
+                    });
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(errorText || 'Failed to assign study');
+                    }
+                    console.log(`Successfully assigned study ${studyId}`);
+                }
+                console.log('Assignment successful, attempting to show success message');
+                const successMessage = document.getElementById('assignSuccessMessage');
+                if (successMessage) {
+                    console.log('Success message element found');
+                    successMessage.style.display = 'block';
+                    successMessage.classList.add('visible');
+                    console.log('Success message set to visible');
+                    // Force DOM reflow
+                    successMessage.offsetHeight; // Trigger reflow
+                    console.log('DOM reflow triggered');
+                } else {
+                    console.error('Success message element not found');
+                }
+                const confirmAssignBtn = document.getElementById('confirmAssignBtn');
+                if (confirmAssignBtn) confirmAssignBtn.textContent = 'OK';
+                const cancelAssignBtn = document.getElementById('cancelAssignBtn');
+                if (cancelAssignBtn) cancelAssignBtn.style.display = 'none';
+                selectedStudies.clear();
+                document.querySelectorAll('.study-checkbox').forEach(c => c.checked = false);
+                updateAssignButtonState();
+                await Promise.all([fetchAllStudies(), fetchAssignedStudies()]);
+                // Dispatch the studyAssigned event to notify index.html
+                window.dispatchEvent(new Event('studyAssigned'));
+                console.log('Dispatched studyAssigned event');
+                // Force a DOM repaint
+                setTimeout(() => {
+                    const modal = document.getElementById('assignModal');
+                    if (modal) modal.scrollTop = 0; // Scroll to top to ensure visibility
+                }, 0);
+            } catch (error) {
+                console.error('Error assigning studies:', error);
+                alert('Failed to assign studies: ' + error.message);
+            } finally {
+                isAssigning = false; // Reset the flag
+                updateAssignButtonState();
+            }
+        }
+
+        // Reassign study
+        async function reassignStudy() {
+            if (!selectedUser || !currentStudyId) {
+                alert('Please select a user to reassign the study to.');
+                return;
+            }
+            try {
+                console.log('Attempting to reassign study:', currentStudyId, 'to:', selectedUser.name); // Debug log
+                const response = await fetch('/api/studies/reassign', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        study_id: currentStudyId,
+                        new_doctor: selectedUser.name
+                    })
+                });
+                if (!response.ok) throw new Error(await response.text() || 'Failed to reassign study');
+                console.log('Reassign API call successful'); // Debug log
+                const successMessage = document.getElementById('reassignSuccessMessage');
+                if (successMessage) {
+                    successMessage.style.display = 'block';
+                    successMessage.classList.add('visible');
+                }
+                const confirmReassignBtn = document.getElementById('confirmReassignBtn');
+                if (confirmReassignBtn) confirmReassignBtn.textContent = 'OK';
+                const cancelReassignBtn = document.getElementById('cancelReassignBtn');
+                if (cancelReassignBtn) cancelReassignBtn.style.display = 'none';
+                await Promise.all([fetchAllStudies(), fetchAssignedStudies()]);
+                // Dispatch the studyAssigned event
+                window.dispatchEvent(new Event('studyAssigned'));
+                console.log('Dispatched studyAssigned event after reassignment');
+            } catch (error) {
+                console.error('Error reassigning study:', error);
+                alert('Failed to reassign study: ' + error.message);
+            }
+        }
+
+        // Unassign study
+        async function unassignStudy(studyId) {
+            if (!confirm(`Are you sure you want to unassign study ${studyId}?`)) return;
+            try {
+                const response = await fetch(`/api/studies/unassign/${studyId}`, {
+                    method: 'DELETE',
+                    headers
+                });
+                if (!response.ok) throw new Error(await response.text() || 'Failed to unassign study');
+                alert(`Unassigned study: ${studyId}`);
+                await Promise.all([fetchAllStudies(), fetchAssignedStudies()]);
+                // Dispatch the studyAssigned event
+                window.dispatchEvent(new Event('studyAssigned'));
+                console.log('Dispatched studyAssigned event after unassignment');
+            } catch (error) {
+                console.error('Error unassigning study:', error);
+                alert('Failed to unassign study: ' + error.message);
+            }
+        }
+
+        // Update study status (placeholder)
+        async function updateStudyStatus(studyId, status) {
+            try {
+                const response = await fetch('/api/studies/update-status', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ study_id: studyId, status })
+                });
+                if (!response.ok) throw new Error('Failed to update study status');
+            } catch (error) {
+                console.error('Error updating study status:', error);
+                // Silent fail for now since endpoint isn't implemented
+            }
+        }
+
+        // Initialize the UI on page load
+        document.addEventListener('DOMContentLoaded', initializeUI);
+    </script>
+</body>
+</html>

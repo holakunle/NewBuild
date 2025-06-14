@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Analysis - Medical Imaging Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #f0f2f5; color: #1a1a1a; display: flex; height: 100vh; overflow: hidden; }
+        .sidebar { width: 250px; background: #2c3e50; color: white; padding: 60px 20px 20px; height: 100vh; position: fixed; top: 0; left: 0; transition: width 0.3s ease; z-index: 1000; overflow-y: auto; }
+        .sidebar::-webkit-scrollbar { width: 8px; }
+        .sidebar::-webkit-scrollbar-thumb { background: #34495e; border-radius: 4px; }
+        .sidebar::-webkit-scrollbar-thumb:hover { background: #3d566e; }
+        .sidebar.minimized { width: 60px; padding: 50px 10px 10px; }
+        .toggle-sidebar-btn { background: #2c3e50; border: none; color: white; font-size: 18px; cursor: pointer; padding: 10px; border-radius: 0; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; position: absolute; top: 10px; right: 10px; z-index: 1001; transition: background 0.3s ease; }
+        .toggle-sidebar-btn:hover { background: #34495e; }
+        .sidebar.minimized .toggle-sidebar-btn { top: 5px; right: 5px; padding: 8px; width: 35px; height: 35px; }
+        .profile { display: flex; align-items: center; margin-bottom: 30px; }
+        .sidebar.minimized .profile { flex-direction: column; align-items: center; margin-bottom: 10px; }
+        .profile-img { width: 40px; height: 40px; border-radius: 50%; background: #ddd; margin-right: 15px; object-fit: cover; }
+        .sidebar.minimized .profile-img { margin-right: 0; margin-bottom: 10px; }
+        .profile-name { font-size: 18px; font-weight: 600; }
+        .sidebar.minimized .profile-name { display: none; }
+        .menu-item { padding: 15px 10px; margin: 10px 0; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: flex; align-items: center; position: relative; }
+        .sidebar.minimized .menu-item { justify-content: center; padding: 10px; }
+        .menu-item:hover { background: #34495e; }
+        .menu-item.active { background: #34495e; }
+        .menu-item i { margin-right: 10px; width: 20px; text-align: center; }
+        .sidebar.minimized .menu-item i { margin-right: 0; }
+        .menu-item span:not(.badge) { flex: 1; }
+        .sidebar.minimized .menu-item span:not(.badge) { display: none; }
+        .sidebar.minimized .menu-item:hover span:not(.badge) {
+            display: block; position: absolute; left: 70px; background: #34495e; color: white; padding: 8px 12px; border-radius: 4px; font-size: 14px; white-space: nowrap; z-index: 1002; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .badge { position: absolute; right: 10px; background: #e74c3c; color: white; border-radius: 12px; padding: 2px 8px; font-size: 12px; }
+        .sidebar.minimized .badge { right: 5px; font-size: 10px; padding: 1px 5px; display: block; }
+        .main-content { margin-left: 250px; padding: 40px; width: calc(100% - 250px); overflow-y: auto; transition: margin-left 0.3s ease, width 0.3s ease; }
+        .main-content.minimized { margin-left: 60px; width: calc(100% - 60px); }
+        .welcome { font-size: 28px; margin-bottom: 30px; color: #2c3e50; }
+        .ai-analysis-section { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .ai-analysis-section h3 { margin-bottom: 15px; color: #2c3e50; }
+        .analysis-form { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .analysis-form input[type="text"] { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 300px; }
+        .analysis-form button { padding: 8px 12px; }
+        .action-btn {
+            background: #3498db; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; transition: background 0.3s; font-size: 14px;
+        }
+        .action-btn:hover { background: #2980b9; }
+        .action-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .study-list { max-height: 200px; overflow-y: auto; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px; margin-top: 10px; padding: 5px; }
+        .study-item { padding: 5px; cursor: pointer; }
+        .study-item:hover { background-color: #e0e0e0; }
+        .study-item.selected { background-color: #d0d0d0; }
+        .highlight { background-color: #ffeb3b; font-weight: bold; }
+        .findings-section { margin-top: 20px; }
+        .findings-section h4 { margin-bottom: 10px; color: #2c3e50; }
+        .findings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .finding-item {
+            background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #3498db; transition: transform 0.3s;
+        }
+        .finding-item:hover { transform: translateY(-5px); }
+        .finding-item.warning { border-left-color: #e74c3c; }
+        .finding-item p { margin: 5px 0; font-size: 14px; }
+        .finding-item[title]:hover::after {
+            content: attr(title); position: absolute; bottom: 100%; left: 10px; background: #333; color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; white-space: nowrap; z-index: 10;
+        }
+        .progress-bar { width: 100%; height: 10px; background: #ddd; border-radius: 5px; overflow: hidden; display: none; }
+        .progress-bar.active { display: block; }
+        .progress-bar::after { content: ''; height: 100%; background: #3498db; width: 0; animation: progress 2s linear infinite; }
+        @keyframes progress { 100% { width: 100%; } }
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .main-content { margin-left: 60px; width: calc(100% - 60px); padding: 20px; }
+            .analysis-form { flex-direction: column; gap: 10px; }
+            .findings-grid { grid-template-columns: 1fr; }
+            .analysis-form input[type="text"] { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <button class="toggle-sidebar-btn" id="toggleSidebarBtn"><i class="fas fa-bars"></i></button>
+        <div class="profile">
+            <img src="./Guests/profile-placeholder.jpg" alt="Profile" class="profile-img" id="profilePic">
+            <span class="profile-name" id="userName">User Name</span>
+        </div>
+        <div id="sidebarMenu"></div>
+    </div>
+    <div class="main-content" id="mainContent">
+        <div class="welcome" id="welcomeMessage"></div>
+        <div class="ai-analysis-section">
+            <h3><i class="fas fa-brain"></i> AI Analysis</h3>
+            <div class="analysis-form">
+                <input type="text" id="studySearchInput" placeholder="Search by name, PID, or date..." aria-label="Search studies">
+                <button class="action-btn" id="refreshStudiesBtn" aria-label="Refresh study list"><i class="fas fa-sync"></i> Refresh</button>
+                <button class="action-btn" id="analyzeBtn" aria-label="Analyze selected study with AI" tabindex="0" disabled>Analyze with AI</button>
+            </div>
+            <div class="progress-bar" id="progressBar"></div>
+            <div class="study-list" id="studyList"></div>
+            <div class="findings-section" id="aiFindings">
+                <h4><i class="fas fa-list"></i> AI Findings</h4>
+                <div class="findings-grid" id="aiResults"></div>
+            </div>
+        </div>
+    </div>
+    <script type="module">
+        import { renderSidebar, coreMenuItemsConfig } from './sidebar.js';
+
+        // Page-specific sidebar items
+        const pageSpecificItems = [
+            { id: 'menuAiAnalysis', icon: 'fas fa-brain', text: 'AI Analysis', url: '/ai-analysis.html', active: true, permission: 'use_ai' },
+            { id: 'menuReports', icon: 'fas fa-file-medical', text: 'Reports', url: '/reports.html', permission: 'view_reports' },
+            { id: 'menuStudies', icon: 'fas fa-stethoscope', text: 'Studies', url: '/studies.html', permission: 'view_studies' }
+        ];
+
+        // Render sidebar on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSidebar(pageSpecificItems);
+        });
+
+        let selectedStudy = null;
+        let currentPage = 1;
+        let isLoading = false;
+        let allStudies = [];
+
+        // Helper to decode JWT token
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                console.error('Error parsing JWT:', e);
+                return null;
+            }
+        }
+
+        // Get current user from JWT token
+        function getCurrentUser() {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            if (!token) {
+                alert('No user logged in. Redirecting to login.');
+                window.location.href = '/login.html';
+                return null;
+            }
+            const payload = parseJwt(token);
+            return payload ? payload.sub : null;
+        }
+
+        // Fetch studies for selection
+        async function fetchStudies(query = '', page = 1, limit = 20) {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            if (!token) {
+                alert('No user logged in. Redirecting to login.');
+                window.location.href = '/login.html';
+                return { studies: [], total: 0, page, limit };
+            }
+
+            try {
+                const response = await fetch(`/api/orthanc/studies/search?query=${encodeURIComponent(query)}&page=${page}&limit=${limit}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                console.log('Fetch studies response:', data); // Debug log
+                return data;
+            } catch (error) {
+                console.error('Error fetching studies:', error);
+                alert('Failed to load studies. Please try again.');
+                return { studies: [], total: 0, page, limit };
+            }
+        }
+
+        function highlightText(text, query) {
+            if (!query) return text;
+            const regex = new RegExp(`(${query})`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        function renderStudyList(studies, query) {
+            const list = document.getElementById('studyList');
+            list.innerHTML = '';
+            if (studies.length === 0) {
+                list.innerHTML = '<div class="study-item" style="color: #e74c3c;">No studies found. Check query, Orthanc data, or try a broader search.</div>';
+                return;
+            }
+            studies.forEach(study => {
+                const displayText = `${study.patient_name || 'Unknown'} - ${study.patient_id || 'N/A'} - ${study.study_description || 'No Description'} (${study.study_date || 'Unknown Date'})`;
+                const highlightedText = highlightText(displayText, query);
+                const div = document.createElement('div');
+                div.className = 'study-item';
+                div.innerHTML = highlightedText;
+                div.addEventListener('click', () => {
+                    selectedStudy = study.id;
+                    document.getElementById('analyzeBtn').disabled = false;
+                    list.querySelectorAll('.study-item').forEach(item => item.classList.remove('selected'));
+                    div.classList.add('selected');
+                });
+                list.appendChild(div);
+            });
+        }
+
+        // Debounce function to limit search requests
+        function debounce(func, wait) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        async function updateStudyList(query, page = 1) {
+            if (isLoading) return;
+            isLoading = true;
+            document.getElementById('progressBar').classList.add('active');
+            try {
+                const data = await fetchStudies(query, page, 20);
+                if (page === 1) {
+                    document.getElementById('studyList').innerHTML = '';
+                    allStudies = [];
+                }
+                renderStudyList(data.studies, query);
+                allStudies = [...allStudies, ...data.studies];
+                currentPage = data.page + 1;
+            } catch (error) {
+                console.error('Error updating study list:', error);
+            } finally {
+                isLoading = false;
+                document.getElementById('progressBar').classList.remove('active');
+            }
+        }
+
+        // Analyze study with AI
+        async function analyzeStudy() {
+            if (!selectedStudy) {
+                alert('Please select a study to analyze.');
+                return;
+            }
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            if (!token) {
+                alert('No user logged in. Redirecting to login.');
+                window.location.href = '/login.html';
+                return;
+            }
+            const progressBar = document.getElementById('progressBar');
+            const aiResults = document.getElementById('aiResults');
+            aiResults.innerHTML = '';
+            progressBar.classList.add('active');
+            document.getElementById('analyzeBtn').disabled = true;
+
+            try {
+                const response = await fetch(`/api/ai/analyze/${selectedStudy}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                console.log("API Response:", data);
+                if (data.status === "completed" && data.result && data.result.detected_conditions && data.result.detected_conditions.length > 0) {
+                    data.result.detected_conditions.forEach(condition => {
+                        const findingItem = document.createElement('div');
+                        findingItem.className = `finding-item ${condition.confidence > 80 ? 'warning' : ''}`;
+                        findingItem.title = `Details: Detected ${condition.condition} with ${condition.confidence.toFixed(1)}% confidence`;
+                        findingItem.innerHTML = `
+                            <p><strong>Abnormality:</strong> ${condition.condition || 'Unknown'}</p>
+                            <p><strong>Confidence:</strong> ${condition.confidence.toFixed(1)}%</p>
+                            <p><strong>Instance ID:</strong> ${data.result.instance_id || 'N/A'}</p>
+                            <p><strong>Primary Condition:</strong> ${data.result.primary_condition} (${data.result.primary_confidence.toFixed(1)}% confidence)</p>
+                            <p><strong>Severity:</strong> ${data.severity || 'Unknown'}</p>
+                            <p><strong>Recommendations:</strong> ${data.recommendations || 'N/A'}</p>
+                        `;
+                        aiResults.appendChild(findingItem);
+                    });
+                } else {
+                    aiResults.innerHTML = '<p>No significant abnormalities detected.</p>';
+                }
+            } catch (error) {
+                console.error('AI analysis error:', error);
+                aiResults.innerHTML = '<p>Failed to perform AI analysis. Please try again.</p>';
+            } finally {
+                progressBar.classList.remove('active');
+                document.getElementById('analyzeBtn').disabled = false;
+            }
+        }
+
+        // Helper functions
+        function getGreeting() {
+            const hour = new Date().getHours();
+            return hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : 'Good Evening';
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('minimized');
+            document.getElementById('mainContent').classList.toggle('minimized');
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            sessionStorage.removeItem('token');
+            window.location.href = '/login.html';
+        }
+
+        async function viewOrthancExplorer() {
+            const response = await fetch('/api/config/orthanc', {
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const config = await response.json();
+            window.location.href = `${config.orthanc_url}/ui/app/index.html`;
+        }
+
+        // Event listeners
+        document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
+        document.getElementById('studySearchInput').addEventListener('input', debounce((e) => {
+            currentPage = 1;
+            updateStudyList(e.target.value, 1);
+        }, 300));
+        document.getElementById('refreshStudiesBtn').addEventListener('click', () => {
+            currentPage = 1;
+            updateStudyList('', 1);
+        });
+        document.getElementById('analyzeBtn').addEventListener('click', () => {
+            if (confirm('Are you sure you want to analyze this study? This may take a moment.')) {
+                analyzeStudy();
+            }
+        });
+
+        // Initialize
+        const currentUser = getCurrentUser();
+        if (currentUser) {
+            document.getElementById('welcomeMessage').textContent = `${getGreeting()}, ${currentUser}`;
+            document.getElementById('userName').textContent = currentUser;
+            document.getElementById('profilePic').src = './Guests/profile-placeholder.jpg';
+            updateStudyList('', 1); // Initial load with all studies
+        }
+    </script>
+</body>
+</html>

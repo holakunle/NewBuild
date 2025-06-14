@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Reports - Medical Imaging Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #f0f2f5; color: #333; display: flex; height: 100vh; overflow: hidden; }
+        .sidebar {
+            width: 250px; background: #2c3e50; color: white; padding: 60px 20px 20px; height: 100vh; position: fixed; top: 0; left: 0; transition: width 0.3s ease; z-index: 1000; overflow-y: auto;
+        }
+        .sidebar::-webkit-scrollbar { width: 8px; }
+        .sidebar::-webkit-scrollbar-thumb { background: #34495e; border-radius: 4px; }
+        .sidebar::-webkit-scrollbar-thumb:hover { background: #3d566e; }
+        .sidebar.minimized { width: 60px; padding: 50px 10px 10px; }
+        .toggle-sidebar-btn {
+            background: #2c3e50; border: none; color: white; font-size: 18px; cursor: pointer; padding: 10px; border-radius: 0; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; position: absolute; top: 10px; right: 10px; z-index: 1001; transition: background 0.3s ease;
+        }
+        .toggle-sidebar-btn:hover { background: #34495e; }
+        .sidebar.minimized .toggle-sidebar-btn { top: 5px; right: 5px; padding: 8px; width: 35px; height: 35px; }
+        .profile { display: flex; align-items: center; margin-bottom: 30px; }
+        .sidebar.minimized .profile { flex-direction: column; align-items: center; margin-bottom: 10px; }
+        .profile-img { width: 40px; height: 40px; border-radius: 50%; background: #ddd; margin-right: 15px; object-fit: cover; }
+        .sidebar.minimized .profile-img { margin-right: 0; margin-bottom: 10px; }
+        .profile-name { font-size: 18px; font-weight: 600; }
+        .sidebar.minimized .profile-name { display: none; }
+        .menu-item { padding: 15px 10px; margin: 10px 0; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: flex; align-items: center; position: relative; }
+        .sidebar.minimized .menu-item { justify-content: center; padding: 10px; }
+        .menu-item:hover { background: #34495e; }
+        .menu-item.active { background: #34495e; }
+        .menu-item i { margin-right: 10px; width: 20px; text-align: center; }
+        .sidebar.minimized .menu-item i { margin-right: 0; }
+        .menu-item span:not(.badge) { flex: 1; }
+        .sidebar.minimized .menu-item span:not(.badge) { display: none; }
+        .sidebar.minimized .menu-item:hover span:not(.badge) {
+            display: block; position: absolute; left: 70px; background: #34495e; color: white; padding: 8px 12px; border-radius: 4px; font-size: 14px; white-space: nowrap; z-index: 1002; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .badge { position: absolute; right: 10px; background: #e74c3c; color: white; border-radius: 12px; padding: 2px 8px; font-size: 12px; }
+        .sidebar.minimized .badge { right: 5px; font-size: 10px; padding: 1px 5px; display: block; }
+        .main-content { margin-left: 250px; padding: 40px; width: calc(100% - 250px); overflow-y: auto; transition: margin-left 0.3s ease, width 0.3s ease; }
+        .main-content.minimized { margin-left: 60px; width: calc(100% - 60px); }
+        .search-section { margin-bottom: 20px; }
+        #studySearchInput { padding: 8px; width: 300px; border: 1px solid #ddd; border-radius: 4px; }
+        .progress-bar { width: 100%; height: 10px; background: #ddd; border-radius: 5px; overflow: hidden; display: none; margin-top: 10px; }
+        .progress-bar.active { display: block; }
+        .progress-bar::after { content: ''; height: 100%; background: #3498db; width: 0; animation: progress 2s linear infinite; }
+        @keyframes progress { 100% { width: 100%; } }
+        .recent-studies-table {
+            width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .recent-studies-table th, .recent-studies-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px; }
+        .recent-studies-table th { background: linear-gradient(135deg, #ffffff, #e8eef3); color: #2c3e50; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .recent-studies-table td { color: #333; font-weight: 500; }
+        .recent-studies-table tr { transition: all 0.3s ease; }
+        .recent-studies-table tr:hover { background: #e6f3ff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transform: translateY(-2px); }
+        .study-drawer {
+            display: none; background: #f9f9f9; padding: 5px 0; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: -1px; width: 100%;
+        }
+        .study-drawer.active { display: table-row; animation: slideDown 0.3s ease-out; }
+        .study-drawer td { display: table-cell; width: 100%; padding: 15px 30px; text-align: left; border-right: 4px solid transparent; border-top: 20px solid #f0f2f5; }
+        .study-drawer td:last-child { border-right: none; }
+        @keyframes slideDown { from { max-height: 0; opacity: 0; } to { max-height: 60px; opacity: 1; } }
+        .action-btn { padding: 6px 20px; font-size: 12px; min-width: 100px; margin: 0 2px; border: none; border-radius: 4px; cursor: pointer; transition: opacity 0.3s; }
+        .action-btn.report-btn { background-color: #F44336; color: white; }
+        .action-btn.report-btn:hover { opacity: 0.9; }
+        .action-btn.view-btn { background-color: #17a2b8; color: white; }
+        .action-btn.view-btn:hover { opacity: 0.9; }
+        .more-options { position: relative; cursor: pointer; padding: 5px; }
+        .more-options:hover .more-options-content { display: block; }
+        .more-options-content {
+            display: none; position: absolute; top: 100%; right: 0; background: #fff; border: 1px solid #ddd; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index: 1000; min-width: 150px;
+        }
+        .more-options-content a { display: block; padding: 8px 12px; color: #333; text-decoration: none; }
+        .more-options-content a:hover { background: #f0f2f5; }
+        .back-btn { background: #007bff; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; }
+        .back-btn:hover { background: #0056b3; }
+        .file-icon { color: #17a2b8; cursor: pointer; font-size: 18px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <button class="toggle-sidebar-btn" id="toggleSidebarBtn"><i class="fas fa-bars"></i></button>
+        <div class="profile">
+            <img src="./Guests/profile-placeholder.jpg" alt="Profile" class="profile-img" id="profilePic">
+            <span class="profile-name" id="userName">User Name</span>
+        </div>
+        <div id="sidebarMenu"></div>
+    </div>
+    <div class="main-content" id="mainContent">
+        <div class="search-section">
+            <input type="text" id="studySearchInput" placeholder="Search by name, PID, or date..." aria-label="Search studies">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <table class="recent-studies-table" id="resultsTable">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="selectAllStudies"></th>
+                    <th>ID</th>
+                    <th>Patient</th>
+                    <th>Study</th>
+                    <th>Date</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="resultsTableBody"></tbody>
+        </table>
+        <button class="back-btn" onclick="window.location.href='/index.html'">Back to Dashboard</button>
+    </div>
+
+    <script type="module">
+        import { renderSidebar, coreMenuItemsConfig } from './sidebar.js';
+
+        const pageSpecificItems = [
+            { id: 'menuDashboard', icon: 'fas fa-home', text: 'Dashboard', url: '/index.html', permission: 'view_dashboard' },
+            { id: 'menuRecentStudies', icon: 'fas fa-clock', text: 'Recent Studies', url: '/index.html#recentStudiesSection', permission: 'view_recent_studies' },
+            { id: 'menuAssignedStudies', icon: 'fas fa-tasks', text: 'Assigned Studies', url: '/index.html#assignmentSection', permission: 'view_assigned_studies' },
+            { id: 'menuSearchStudies', icon: 'fas fa-search', text: 'Search Studies', url: '/index.html#searchSection', permission: 'search_studies' },
+            { id: 'menuAIAnalysis', icon: 'fas fa-brain', text: 'AI Analysis', url: '/ai-analysis.html', permission: 'use_ai' },
+            { id: 'menuCreateReport', icon: 'fas fa-file-alt', text: 'Create a Report', url: '/view-report.html', active: true, permission: 'create_report' },
+            { id: 'menuActiveReporting', icon: 'fas fa-file-medical', text: 'Active Reporting', url: '/active-reporting.html', permission: 'create_report' },
+            { id: 'menuAdminPanel', icon: 'fas fa-user-cog', text: 'Admin Panel', url: '/admin.html', permission: 'manage_users' }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSidebar(pageSpecificItems);
+            const currentUser = getCurrentUser();
+            if (currentUser) {
+                document.getElementById('userName').textContent = currentUser;
+                document.getElementById('profilePic').src = './Guests/profile-placeholder.jpg';
+            }
+        });
+
+        let selectedStudy = null;
+        let isLoading = false;
+        let currentPage = 1;
+        let allStudies = [];
+
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                console.error('Error parsing JWT:', e);
+                return null;
+            }
+        }
+
+        function getCurrentUser() {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            if (!token) {
+                alert('No user logged in. Redirecting to login.');
+                window.location.href = '/login.html';
+                return null;
+            }
+            const payload = parseJwt(token);
+            return payload ? payload.sub : null;
+        }
+
+        async function fetchStudies(query = '', page = 1, limit = 20) {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            if (!token) {
+                alert('No user logged in. Redirecting to login.');
+                window.location.href = '/login.html';
+                return { studies: [], total: 0, page, limit };
+            }
+            try {
+                const response = await fetch(`/api/orthanc/studies/search?query=${encodeURIComponent(query)}&page=${page}&limit=${limit}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error('Error fetching studies:', error);
+                alert('Failed to load studies. Please try again.');
+                return { studies: [], total: 0, page, limit };
+            }
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        function renderStudyTable(studies) {
+            const tbody = document.getElementById('resultsTableBody');
+            tbody.innerHTML = '';
+            if (studies.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="color: #e74c3c;">No studies found.</td></tr>';
+                return;
+            }
+            studies.forEach(study => {
+                const tr = document.createElement('tr');
+                tr.dataset.studyId = study.id;
+                const reportAction = study.has_report ? 
+                    `<i class="file-icon fas fa-file" data-action="view" data-study-id="${study.id}" title="View Report"></i>` :
+                    `<button class="action-btn report-btn" data-action="report" data-study-id="${study.id}"><i class="fas fa-file-medical"></i> Create Report</button>`;
+                tr.innerHTML = `
+                    <td><input type="checkbox" class="study-checkbox" data-study-id="${study.id}"></td>
+                    <td>${study.patient_id || 'N/A'}</td>
+                    <td>${study.patient_name || 'Unknown'}</td>
+                    <td>${study.study_description || 'N/A'}</td>
+                    <td>${study.study_date ? study.study_date.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') : 'N/A'}</td>
+                    <td>${reportAction}</td>
+                `;
+                const drawer = document.createElement('tr');
+                drawer.className = 'study-drawer';
+                drawer.dataset.studyId = study.id;
+                drawer.innerHTML = `
+                    <td colspan="6">
+                        ${study.has_report ? 
+                            `<button class="action-btn view-btn" data-action="view" data-study-id="${study.id}"><i class="fas fa-file"></i> View Report</button>` :
+                            `<button class="action-btn report-btn" data-action="report" data-study-id="${study.id}"><i class="fas fa-file-medical"></i> Create Report</button>`}
+                    </td>
+                `;
+                tr.addEventListener('click', (e) => {
+                    if (!e.target.closest('.more-options') && !e.target.classList.contains('study-checkbox') && !e.target.classList.contains('file-icon')) toggleDrawer(tr, drawer);
+                });
+                tbody.appendChild(tr);
+                tbody.appendChild(drawer);
+            });
+        }
+
+        async function updateStudyList(query, page = 1) {
+            if (isLoading) return;
+            isLoading = true;
+            document.getElementById('progressBar').classList.add('active');
+            try {
+                const data = await fetchStudies(query, page, 20);
+                if (page === 1) {
+                    allStudies = [];
+                    renderStudyTable(data.studies);
+                } else {
+                    renderStudyTable([...allStudies, ...data.studies]);
+                }
+                allStudies = [...allStudies, ...data.studies];
+                currentPage = data.page + 1;
+            } catch (error) {
+                console.error('Error updating study list:', error);
+            } finally {
+                isLoading = false;
+                document.getElementById('progressBar').classList.remove('active');
+            }
+        }
+
+        function createReport(studyId) {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            const currentUser = parseJwt(token)?.sub;
+            const reportedStudies = JSON.parse(localStorage.getItem(`reportedStudies_${currentUser}`) || '[]');
+            if (reportedStudies.includes(studyId)) {
+                alert('This study has already been reported.');
+                return;
+            }
+            const study = allStudies.find(s => s.id === studyId);
+            const params = new URLSearchParams({
+                studyInstanceUID: study.id,
+                patientName: study.patient_name || '',
+                patientID: study.patient_id || '',
+                modality: study.modalities ? study.modalities.split(',')[0] : ''
+            }).toString();
+            window.location.href = `/report.html?${params}`;
+        }
+
+        async function viewReport(studyId) {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            try {
+                // Fetch report list to get report_id
+                const response = await fetch(`/api/reports?study_id=${studyId}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const reports = await response.json();
+                const report = reports.find(r => r.studyId === studyId);
+                if (report) {
+                    const reportResponse = await fetch(`/api/reports/${report.id}`, {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+                    });
+                    if (!reportResponse.ok) throw new Error(`HTTP ${reportResponse.status}`);
+                    const reportData = await reportResponse.json();
+                    // Display report data (e.g., in a modal or new page)
+                    alert(`Report for ${studyId}:\nFindings: ${reportData.findings}\nImpression: ${reportData.impression}`);
+                } else {
+                    alert('No report exists for this study.');
+                }
+            } catch (error) {
+                console.error('Error viewing report:', error);
+                alert('Failed to load report.');
+            }
+        }
+
+        function toggleDrawer(row, drawer) {
+            const isActive = drawer.classList.contains('active');
+            document.querySelectorAll('.study-drawer.active').forEach(d => d.classList.remove('active'));
+            if (!isActive) {
+                drawer.classList.add('active');
+            }
+        }
+
+        document.getElementById('resultsTableBody').addEventListener('click', async (e) => {
+            const button = e.target.closest('.action-btn');
+            const fileIcon = e.target.closest('.file-icon');
+            if (button || fileIcon) {
+                e.stopPropagation();
+                const studyId = (button || fileIcon).dataset.studyId;
+                const action = (button || fileIcon).dataset.action;
+                if (action === 'report') createReport(studyId);
+                else if (action === 'view') viewReport(studyId);
+            }
+        });
+
+        document.getElementById('selectAllStudies').addEventListener('change', () => {
+            const checkboxes = document.querySelectorAll('#resultsTableBody .study-checkbox');
+            checkboxes.forEach(checkbox => checkbox.checked = document.getElementById('selectAllStudies').checked);
+        });
+
+        document.getElementById('resultsTableBody').addEventListener('change', (e) => {
+            if (e.target.classList.contains('study-checkbox')) {
+                const allChecked = document.querySelectorAll('#resultsTableBody .study-checkbox:checked').length === document.querySelectorAll('#resultsTableBody .study-checkbox').length;
+                document.getElementById('selectAllStudies').checked = allChecked;
+            }
+        });
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('minimized');
+            document.getElementById('mainContent').classList.toggle('minimized');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSidebar(pageSpecificItems);
+            const searchInput = document.getElementById('studySearchInput');
+            searchInput.addEventListener('input', debounce((e) => {
+                currentPage = 1;
+                updateStudyList(e.target.value, 1);
+            }, 300));
+            updateStudyList('', 1);
+            document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Medical Report</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+        .report-container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .header { display: flex; align-items: center; margin-bottom: 20px; }
+        .hospital-logo { width: 80px; height: 80px; margin-right: 20px; }
+        .hospital-info h2 { margin: 0; font-size: 24px; }
+        .hospital-info p { margin: 5px 0; color: #555; }
+        .header-info { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .header-info .form-group { flex: 1; margin-right: 20px; }
+        .header-info .form-group:last-child { margin-right: 0; }
+        .section { margin-bottom: 20px; }
+        .section h3 { border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; }
+        .form-group input, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .form-group textarea { height: 100px; resize: vertical; }
+        .form-group .error { color: #dc3545; font-size: 12px; margin-top: 5px; display: none; }
+        .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .action-btn { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; }
+        .action-btn i { margin-right: 5px; }
+        .action-btn:hover { background: #0056b3; }
+        .action-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .print-btn { background: #28a745; }
+        .print-btn:hover { background: #218838; }
+        .download-btn { background: #17a2b8; }
+        .download-btn:hover { background: #138496; }
+        .series-btn { background: #6f42c1; }
+        .series-btn:hover { background: #5a32a3; }
+        .viewer-btn { background: #dc3545; }
+        .viewer-btn:hover { background: #c82333; }
+        .draft-btn { background: #ffc107; color: #212529; }
+        .draft-btn:hover { background: #e0a800; }
+        .spinner { display: none; border: 2px solid white; border-top: 2px solid transparent; border-radius: 50%; width: 12px; height: 12px; animation: spin 1s linear infinite; margin-left: 5px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .error-message { color: #dc3545; font-size: 14px; margin-top: 10px; display: none; }
+        @media print {
+            .button-group, .action-btn:not(.print-btn), .error-message, .error { display: none; }
+            .report-container { box-shadow: none; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <div class="header">
+            <img src="" alt="Hospital Logo" class="hospital-logo" id="hospitalLogo">
+            <div class="hospital-info">
+                <h2 id="hospitalName">Loading...</h2>
+                <p id="hospitalAddress">Loading...</p>
+                <p id="hospitalPhone">Loading...</p>
+            </div>
+        </div>
+
+        <div class="header-info">
+            <div class="form-group">
+                <label for="patientName">Patient Name</label>
+                <input type="text" id="patientName" required>
+                <div class="error" id="patientNameError">Please enter the patient name.</div>
+            </div>
+            <div class="form-group">
+                <label for="studyType">Study Type</label>
+                <input type="text" id="studyType" required>
+                <div class="error" id="studyTypeError">Please enter the study type.</div>
+            </div>
+            <div class="form-group">
+                <label for="patientID">Patient ID</label>
+                <input type="text" id="patientID" required>
+                <div class="error" id="patientIDError">Please enter the patient ID.</div>
+            </div>
+        </div>
+
+        <form id="reportForm">
+            <div class="section">
+                <h3>Study Information</h3>
+                <div class="form-group">
+                    <label for="studyDate">Study Date</label>
+                    <input type="date" id="studyDate" required>
+                    <div class="error" id="studyDateError">Please select the study date.</div>
+                </div>
+                <div class="form-group">
+                    <label for="studyDescription">Study Description</label>
+                    <textarea id="studyDescription" placeholder="Describe the study performed" required></textarea>
+                    <div class="error" id="studyDescriptionError">Please enter the study description.</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Findings</h3>
+                <div class="form-group">
+                    <label for="findings">Detailed Findings</label>
+                    <textarea id="findings" placeholder="Enter detailed findings" required></textarea>
+                    <div class="error" id="findingsError">Please enter the findings.</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Impression</h3>
+                <div class="form-group">
+                    <label for="impression">Impression</label>
+                    <textarea id="impression" placeholder="Enter impression" required></textarea>
+                    <div class="error" id="impressionError">Please enter the impression.</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Recommendations</h3>
+                <div class="form-group">
+                    <label for="recommendations">Recommendations</label>
+                    <textarea id="recommendations" placeholder="Enter recommendations"></textarea>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Radiologist</h3>
+                <div class="form-group">
+                    <label for="radiologistName">Radiologist Name</label>
+                    <input type="text" id="radiologistName" placeholder="Enter radiologist name" required>
+                    <div class="error" id="radiologistNameError">Please enter the radiologist name.</div>
+                </div>
+                <div class="form-group">
+                    <label for="reportDate">Report Date</label>
+                    <input type="date" id="reportDate" required>
+                    <div class="error" id="reportDateError">Please select the report date.</div>
+                </div>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="button-group">
+                <button type="button" class="action-btn" id="saveReportBtn"><i class="fas fa-save"></i> Finalize Report</button>
+                <button type="button" class="action-btn draft-btn" id="saveDraftBtn"><i class="fas fa-save"></i> Save as Draft</button>
+                <button type="button" class="action-btn print-btn" onclick="printReport()"><i class="fas fa-print"></i> Print Report</button>
+                <button type="button" class="action-btn download-btn" onclick="downloadReport()"><i class="fas fa-download"></i> Download PDF</button>
+                <button type="button" class="action-btn series-btn" id="seriesBtn" onclick="addPDFAsSeries()"><i class="fas fa-paperclip"></i> Add PDF as Series <div class="spinner" id="seriesSpinner"></div></button>
+                <button type="button" class="action-btn viewer-btn" id="viewerBtn" onclick="openStudyInViewer()" disabled><i class="fas fa-eye"></i> View Study in Stone Viewer</button>
+                <button type="button" class="action-btn" onclick="window.location.href='/index.html'"><i class="fas fa-arrow-left"></i> Back to Dashboard</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        console.log('Script loaded');
+        const { jsPDF } = window.jspdf || {};
+        if (!jsPDF) {
+            console.error('jsPDF not loaded');
+            document.getElementById('errorMessage').textContent = 'PDF library failed to load. Please try again.';
+            document.getElementById('errorMessage').style.display = 'block';
+        }
+
+        // Check authentication
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token) {
+            console.log('No token found, redirecting to login');
+            window.location.href = '/login.html';
+        }
+
+        // Helper to decode JWT token
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                console.error('Error parsing JWT:', e);
+                return null;
+            }
+        }
+
+        // Load hospital configuration from backend
+        async function loadHospitalConfig() {
+            const errorDiv = document.getElementById('errorMessage');
+            console.log('Loading hospital config');
+            try {
+                const response = await fetch('/api/config/hospital', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                const config = await response.json();
+                console.log('Hospital config:', config);
+                document.getElementById('hospitalName').textContent = config.hospital_name || 'Hospital Name';
+                document.getElementById('hospitalAddress').textContent = config.hospital_address || 'Hospital Address';
+                document.getElementById('hospitalPhone').textContent = config.hospital_phone || 'Hospital Phone';
+                const logo = document.getElementById('hospitalLogo');
+                logo.src = config.hospital_logo || 'https://via.placeholder.com/80';
+                logo.onerror = () => { logo.src = 'https://via.placeholder.com/80'; };
+                errorDiv.style.display = 'none';
+                return config;
+            } catch (error) {
+                console.error('Load hospital config error:', error);
+                errorDiv.textContent = `Failed to load hospital information: ${error.message}`;
+                errorDiv.style.display = 'block';
+                return {};
+            }
+        }
+
+        // Load Orthanc configuration
+        async function loadOrthancConfig() {
+            console.log('Loading Orthanc config');
+            try {
+                const response = await fetch('/api/config/orthanc', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                const config = await response.json();
+                console.log('Orthanc config:', config);
+                return { orthancUrl: config.orthanc_url };
+            } catch (error) {
+                console.error('Load Orthanc config error:', error);
+                return {};
+            }
+        }
+
+        // Parse query parameters and prefill fields
+        function loadQueryParams() {
+            console.log('Loading query params');
+            const params = new URLSearchParams(window.location.search);
+            document.getElementById('patientName').value = params.get('patientName') || '';
+            document.getElementById('studyType').value = params.get('modality') || '';
+            document.getElementById('patientID').value = params.get('patientID') || '';
+            document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
+            const studyInstanceUID = params.get('studyInstanceUID') || '';
+            console.log('Extracted StudyInstanceUID:', studyInstanceUID);
+            if (!studyInstanceUID) {
+                console.error('StudyInstanceUID is missing in URL');
+                document.getElementById('errorMessage').textContent = 'Error: StudyInstanceUID is missing in the URL query parameters.';
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+            return studyInstanceUID;
+        }
+
+        // Load draft if exists
+        function loadDraft(studyId) {
+            const currentUser = parseJwt(token)?.sub;
+            if (!currentUser || !studyId) return;
+            const draftKey = `draftReport_${currentUser}_${studyId}`;
+            const draft = JSON.parse(localStorage.getItem(draftKey));
+            if (draft) {
+                document.getElementById('patientName').value = draft.patientName || '';
+                document.getElementById('studyType').value = draft.studyType || '';
+                document.getElementById('patientID').value = draft.patientID || '';
+                document.getElementById('studyDate').value = draft.studyDate || '';
+                document.getElementById('studyDescription').value = draft.studyDescription || '';
+                document.getElementById('findings').value = draft.findings || '';
+                document.getElementById('impression').value = draft.impression || '';
+                document.getElementById('recommendations').value = draft.recommendations || '';
+                document.getElementById('radiologistName').value = draft.radiologistName || '';
+                document.getElementById('reportDate').value = draft.reportDate || new Date().toISOString().split('T')[0];
+                console.log('Loaded draft for study:', studyId);
+            }
+        }
+
+        // Show form validation errors
+        function showValidationErrors(form) {
+            const inputs = form.querySelectorAll('input[required], textarea[required]');
+            let isValid = true;
+            inputs.forEach(input => {
+                const errorDiv = document.getElementById(`${input.id}Error`);
+                if (!input.value.trim()) {
+                    errorDiv.style.display = 'block';
+                    isValid = false;
+                } else {
+                    errorDiv.style.display = 'none';
+                }
+            });
+            return isValid;
+        }
+
+        // Save report as draft
+        async function saveDraft() {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.style.display = 'none';
+
+            const studyId = loadQueryParams();
+            if (!studyId) {
+                errorDiv.textContent = 'Error: Study ID is missing.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const report = {
+                studyId: studyId,
+                patientName: document.getElementById('patientName').value,
+                patientID: document.getElementById('patientID').value,
+                studyType: document.getElementById('studyType').value,
+                studyDate: document.getElementById('studyDate').value,
+                studyDescription: document.getElementById('studyDescription').value,
+                findings: document.getElementById('findings').value,
+                impression: document.getElementById('impression').value,
+                recommendations: document.getElementById('recommendations').value,
+                radiologistName: document.getElementById('radiologistName').value,
+                reportDate: document.getElementById('reportDate').value
+            };
+
+            const currentUser = parseJwt(token)?.sub;
+            if (currentUser && studyId) {
+                const draftKey = `draftReport_${currentUser}_${studyId}`;
+                localStorage.setItem(draftKey, JSON.stringify(report));
+                console.log('Draft saved:', report);
+                alert('Report saved as draft successfully! You can resume editing in Active Reporting.');
+            } else {
+                errorDiv.textContent = 'Error: Unable to save draft due to missing user or study ID.';
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        // Log report completion
+        async function logReportComplete(studyId) {
+            if (!studyId) {
+                console.warn('No studyId found, skipping completion log');
+                return;
+            }
+            try {
+                const response = await fetch('/api/reports/complete', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ study_id: studyId })
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                console.log('Report completion logged successfully');
+            } catch (error) {
+                console.error('Error logging report completion:', error);
+                alert('Failed to log report completion, but the report was saved.');
+            }
+        }
+
+        // Finalize report submission
+        async function finalizeReport() {
+            const form = document.getElementById('reportForm');
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.style.display = 'none';
+
+            if (!showValidationErrors(form)) {
+                errorDiv.textContent = 'Please fill in all required fields.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const studyId = loadQueryParams();
+            if (!studyId) {
+                errorDiv.textContent = 'Error: Study ID is missing.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            const report = {
+                studyId: studyId,
+                patientName: document.getElementById('patientName').value,
+                patientID: document.getElementById('patientID').value,
+                studyType: document.getElementById('studyType').value,
+                studyDate: document.getElementById('studyDate').value,
+                studyDescription: document.getElementById('studyDescription').value,
+                findings: document.getElementById('findings').value,
+                impression: document.getElementById('impression').value,
+                recommendations: document.getElementById('recommendations').value,
+                radiologistName: document.getElementById('radiologistName').value,
+                reportDate: document.getElementById('reportDate').value
+            };
+            console.log('Finalizing report:', report);
+            try {
+                const response = await fetch('/api/reports', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(report)
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+                // Log report completion
+                await logReportComplete(studyId);
+                // Update reported studies in localStorage
+                const currentUser = parseJwt(token)?.sub;
+                if (currentUser && studyId) {
+                    const reportedStudies = JSON.parse(localStorage.getItem(`reportedStudies_${currentUser}`) || '[]');
+                    if (!reportedStudies.includes(studyId)) {
+                        reportedStudies.push(studyId);
+                        localStorage.setItem(`reportedStudies_${currentUser}`, JSON.stringify(reportedStudies));
+                    }
+                    // Remove draft if exists
+                    const draftKey = `draftReport_${currentUser}_${studyId}`;
+                    localStorage.removeItem(draftKey);
+                }
+                alert(`Report finalized successfully on ${new Date().toLocaleString()}!`);
+                window.location.href = '/index.html';
+            } catch (error) {
+                console.error('Finalize report error:', error);
+                errorDiv.textContent = `Failed to finalize report: ${error.message}`;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        // Print report
+        function printReport() {
+            console.log('Printing report');
+            window.print();
+        }
+
+        // Generate PDF content
+        function generatePDF() {
+            if (!jsPDF) {
+                throw new Error('jsPDF library not loaded');
+            }
+            console.log('Generating PDF');
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            const hospitalName = document.getElementById('hospitalName').textContent;
+            const hospitalAddress = document.getElementById('hospitalAddress').textContent;
+            const hospitalPhone = document.getElementById('hospitalPhone').textContent;
+            const hospitalLogo = document.getElementById('hospitalLogo').src;
+
+            const patientName = document.getElementById('patientName').value;
+            const studyType = document.getElementById('studyType').value;
+            const patientID = document.getElementById('patientID').value;
+            const studyDate = document.getElementById('studyDate').value;
+            const studyDescription = document.getElementById('studyDescription').value;
+            const findings = document.getElementById('findings').value;
+            const impression = document.getElementById('impression').value;
+            const recommendations = document.getElementById('recommendations').value;
+            const radiologistName = document.getElementById('radiologistName').value;
+            const reportDate = document.getElementById('reportDate').value;
+
+            function addWrappedText(text, x, y, maxWidth, lineHeight, fontSize) {
+                doc.setFontSize(fontSize);
+                const lines = doc.splitTextToSize(text, maxWidth);
+                lines.forEach(line => {
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 15;
+                    }
+                    doc.text(line, x, y);
+                    y += lineHeight;
+                });
+                return y;
+            }
+
+            try {
+                doc.addImage(hospitalLogo, 'PNG', 15, 15, 20, 20);
+            } catch (e) {
+                console.warn('Failed to load logo, using placeholder text');
+                doc.setFontSize(10);
+                doc.text('Hospital Logo', 15, 20);
+            }
+
+            let y = 15;
+            doc.setFontSize(14);
+            doc.text(hospitalName, 40, y);
+            y += 6;
+            doc.setFontSize(10);
+            doc.text(hospitalAddress, 40, y);
+            y += 5;
+            doc.text(hospitalPhone, 40, y);
+            y += 10;
+
+            doc.setLineWidth(0.5);
+            doc.line(15, y, 195, y);
+            y += 10;
+
+            doc.setFontSize(10);
+            doc.text(`Patient Name: ${patientName}`, 15, y);
+            doc.text(`Study Type: ${studyType}`, 80, y);
+            doc.text(`Patient ID: ${patientID}`, 145, y);
+            y += 10;
+
+            doc.setFontSize(12);
+            doc.text('Study Information', 15, y);
+            doc.setLineWidth(0.3);
+            doc.line(15, y + 1, 50, y + 1);
+            y += 6;
+            doc.setFontSize(10);
+            doc.text(`Study Date: ${studyDate}`, 15, y);
+            y += 6;
+            y = addWrappedText(`Study Description: ${studyDescription}`, 15, y, 180, 5, 10);
+
+            y += 5;
+            doc.setFontSize(12);
+            doc.text('Findings', 15, y);
+            doc.line(15, y + 1, 35, y + 1);
+            y += 6;
+            y = addWrappedText(findings, 15, y, 180, 5, 10);
+
+            y += 5;
+            doc.setFontSize(12);
+            doc.text('Impression', 15, y);
+            doc.line(15, y + 1, 40, y + 1);
+            y += 6;
+            y = addWrappedText(impression, 15, y, 180, 5, 10);
+
+            y += 5;
+            doc.setFontSize(12);
+            doc.text('Recommendations', 15, y);
+            doc.line(15, y + 1, 55, y + 1);
+            y += 6;
+            y = addWrappedText(recommendations || 'None', 15, y, 180, 5, 10);
+
+            y += 5;
+            doc.setFontSize(12);
+            doc.text('Radiologist', 15, y);
+            doc.line(15, y + 1, 40, y + 1);
+            y += 6;
+            doc.setFontSize(10);
+            doc.text(`Radiologist Name: ${radiologistName}`, 15, y);
+            y += 5;
+            doc.text(`Report Date: ${reportDate}`, 15, y);
+
+            return doc;
+        }
+
+        // Download report as PDF
+        function downloadReport() {
+            console.log('Downloading report');
+            try {
+                const doc = generatePDF();
+                const patientName = document.getElementById('patientName').value;
+                const reportDate = document.getElementById('reportDate').value;
+                doc.save(`Medical_Report_${patientName.replace(/\s+/g, '_')}_${reportDate}.pdf`);
+            } catch (error) {
+                console.error('Download report error:', error);
+                document.getElementById('errorMessage').textContent = `Failed to download PDF: ${error.message}`;
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        }
+
+        // Add PDF as a new series to Orthanc study
+        async function addPDFAsSeries() {
+            console.log('Add PDF as Series clicked');
+            const studyInstanceUID = loadQueryParams();
+            const errorDiv = document.getElementById('errorMessage');
+            const seriesBtn = document.getElementById('seriesBtn');
+            const seriesSpinner = document.getElementById('seriesSpinner');
+
+            if (!studyInstanceUID) {
+                console.error('Missing StudyInstanceUID');
+                errorDiv.textContent = 'Error: StudyInstanceUID is missing in the URL query parameters.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            console.log('Using StudyInstanceUID:', studyInstanceUID);
+            if (!/^[0-9.]+$/.test(studyInstanceUID)) {
+                console.error('Invalid StudyInstanceUID format:', studyInstanceUID);
+                errorDiv.textContent = 'Error: Invalid StudyInstanceUID format.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            seriesBtn.disabled = true;
+            seriesSpinner.style.display = 'inline-block';
+            errorDiv.style.display = 'none';
+            console.log('Generating PDF for upload');
+
+            try {
+                const doc = generatePDF();
+                const pdfBlob = doc.output('blob');
+                console.log('PDF blob created, size:', pdfBlob.size);
+
+                const formData = new FormData();
+                formData.append('file', pdfBlob, 'report.pdf');
+                console.log('Sending POST to /api/orthanc/instances with study_id:', studyInstanceUID);
+
+                const response = await fetch(`/api/orthanc/instances?study_id=${encodeURIComponent(studyInstanceUID)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Error response:', errorData);
+                    if (response.status === 404) {
+                        throw new Error(`Study with StudyInstanceUID ${studyInstanceUID} not found in Orthanc`);
+                    }
+                    throw new Error(`HTTP ${response.status}: ${errorData.detail || 'Unknown error'}`);
+                }
+
+                const result = await response.json();
+                console.log('PDF upload response:', result);
+                alert(`PDF report successfully added as a new series: ${result.instance_id}`);
+                const viewerBtn = document.getElementById('viewerBtn');
+                viewerBtn.disabled = false;
+                viewerBtn.dataset.studyInstanceUID = studyInstanceUID;
+            } catch (error) {
+                console.error('Error adding PDF as series:', error);
+                errorDiv.textContent = `Failed to add PDF as series: ${error.message}`;
+                errorDiv.style.display = 'block';
+            } finally {
+                seriesBtn.disabled = false;
+                seriesSpinner.style.display = 'none';
+            }
+        }
+
+        // Open study in Stone Web Viewer
+        async function openStudyInViewer() {
+            console.log('Open Study in Viewer clicked');
+            const viewerBtn = document.getElementById('viewerBtn');
+            const studyInstanceUID = viewerBtn.dataset.studyInstanceUID;
+            const errorDiv = document.getElementById('errorMessage');
+            if (!studyInstanceUID) {
+                console.error('No study selected for viewing');
+                errorDiv.textContent = 'Error: No study selected for viewing.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            const settings = await loadOrthancConfig();
+            if (!settings.orthancUrl) {
+                console.error('Orthanc URL not configured');
+                errorDiv.textContent = 'Error: Orthanc URL not configured.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            console.log('Opening study in Stone Web Viewer:', studyInstanceUID);
+            try {
+                const viewerUrl = `${settings.orthancUrl}/stone-webviewer/index.html?study=${studyInstanceUID}`;
+                window.open(viewerUrl, '_blank');
+            } catch (error) {
+                console.error('Error opening viewer:', error);
+                errorDiv.textContent = `Failed to open study in viewer: ${error.message}`;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        // Initialize page
+        async function init() {
+            console.log('Initializing page');
+            await loadHospitalConfig();
+            const studyId = loadQueryParams();
+            loadDraft(studyId);
+            if (studyId) {
+                document.getElementById('viewerBtn').dataset.studyInstanceUID = studyId;
+                document.getElementById('viewerBtn').disabled = false;
+            }
+            document.getElementById('saveReportBtn').addEventListener('click', finalizeReport);
+            document.getElementById('saveDraftBtn').addEventListener('click', saveDraft);
+        }
+
+        // Run initialization
+        init().catch(error => {
+            console.error('Initialization error:', error);
+            document.getElementById('errorMessage').textContent = `Initialization failed: ${error.message}`;
+            document.getElementById('errorMessage').style.display = 'block';
+        });
+    </script>
+</body>
+</html>

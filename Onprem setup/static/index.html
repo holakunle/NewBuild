@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Imaging Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #f0f2f5; color: #333; display: flex; height: 100vh; overflow: hidden; }
+        .sidebar {
+            width: 250px; background: #2c3e50; color: white; padding: 60px 20px 20px; height: 100vh; position: fixed; top: 0; left: 0; transition: width 0.3s ease; z-index: 1000; overflow-y: auto;
+        }
+        .sidebar::-webkit-scrollbar { width: 8px; }
+        .sidebar::-webkit-scrollbar-thumb { background: #34495e; border-radius: 4px; }
+        .sidebar::-webkit-scrollbar-thumb:hover { background: #3d566e; }
+        .sidebar.minimized { width: 60px; padding: 50px 10px 10px; }
+        .toggle-sidebar-btn {
+            background: #2c3e50; border: none; color: white; font-size: 18px; cursor: pointer; padding: 10px; border-radius: 0; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; position: absolute; top: 10px; right: 10px; z-index: 1001; transition: background 0.3s ease;
+        }
+        .toggle-sidebar-btn:hover { background: #34495e; }
+        .sidebar.minimized .toggle-sidebar-btn { top: 5px; right: 5px; padding: 8px; width: 35px; height: 35px; }
+        .profile { display: flex; align-items: center; margin-bottom: 30px; }
+        .sidebar.minimized .profile { flex-direction: column; align-items: center; margin-bottom: 10px; }
+        .profile-img { width: 40px; height: 40px; border-radius: 50%; background: #ddd; margin-right: 15px; object-fit: cover; }
+        .sidebar.minimized .profile-img { margin-right: 0; margin-bottom: 10px; }
+        .profile-name { font-size: 18px; font-weight: 600; }
+        .sidebar.minimized .profile-name { display: none; }
+        .menu-item { padding: 15px 10px; margin: 10px 0; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: flex; align-items: center; position: relative; }
+        .sidebar.minimized .menu-item { justify-content: center; padding: 10px; }
+        .menu-item:hover { background: #34495e; }
+        .menu-item.active { background: #34495e; }
+        .menu-item.hidden { display: none; }
+        .menu-item i { margin-right: 10px; width: 20px; text-align: center; }
+        .sidebar.minimized .menu-item i { margin-right: 0; }
+        .menu-item span:not(.badge) { flex: 1; }
+        .sidebar.minimized .menu-item span:not(.badge) { display: none; }
+        .sidebar.minimized .menu-item:hover span:not(.badge) {
+            display: block; position: absolute; left: 70px; background: #34495e; color: white; padding: 8px 12px; border-radius: 4px; font-size: 14px; white-space: nowrap; z-index: 1002; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .badge { position: absolute; right: 10px; background: #e74c3c; color: white; border-radius: 12px; padding: 2px 8px; font-size: 12px; }
+        .sidebar.minimized .badge { right: 5px; font-size: 10px; padding: 1px 5px; display: block; }
+        .dropdown { position: relative; }
+        .dropdown-content { display: none; position: absolute; left: 100%; top: 0; background: #34495e; min-width: 160px; border-radius: 8px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); z-index: 1; }
+        .sidebar.minimized .dropdown-content { left: 60px; }
+        .dropdown:hover .dropdown-content { display: block; }
+        .dropdown-item { padding: 10px 15px; color: white; text-decoration: none; display: block; }
+        .dropdown-item:hover { background: #3d566e; }
+        .main-content { margin-left: 250px; padding: 40px; width: calc(100% - 250px); overflow-y: auto; transition: margin-left 0.3s ease, width 0.3s ease; }
+        .main-content.minimized { margin-left: 60px; width: calc(100% - 60px); }
+        .welcome { font-size: 28px; margin-bottom: 30px; color: #2c3e50; font-weight: 600; }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.3s; min-width: 200px; }
+        .card:hover { transform: translateY(-5px); }
+        .card i { font-size: 24px; margin-bottom: 10px; color: #3498db; }
+        .card h3 { margin-bottom: 10px; color: #2c3e50; font-weight: 700; }
+        .recent-studies-section, .assignment-section, .search-section {
+            display: none; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px;
+        }
+        .recent-studies-section.active, .search-section.active { display: block; }
+        .assignment-section.active { display: block; }
+        .recent-studies-table, .assigned-studies-table, .search-results-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .recent-studies-table th,
+        .recent-studies-table td,
+        .assigned-studies-table th,
+        .assigned-studies-table td,
+        .search-results-table th,
+        .search-results-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            font-size: 14px;
+        }
+        .recent-studies-table th,
+        .assigned-studies-table th,
+        .search-results-table th {
+            background: linear-gradient(135deg, #ffffff, #e8eef3);
+            color: #2c3e50;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .recent-studies-table td,
+        .assigned-studies-table td,
+        .search-results-table td {
+            color: #333;
+            font-weight: 500;
+        }
+        .recent-studies-table tr,
+        .assigned-studies-table tr,
+        .search-results-table tr {
+            transition: all 0.3s ease;
+        }
+        .recent-studies-table tr:hover,
+        .assigned-studies-table tr:hover,
+        .search-results-table tr:hover {
+            background: #e6f3ff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        .study-drawer {
+            display: none;
+            background: #f9f9f9;
+            padding: 5px 0;
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-top: -1px;
+            width: 100%;
+        }
+        .study-drawer.active {
+            display: table-row;
+            animation: slideDown 0.3s ease-out;
+        }
+        .study-drawer td {
+            display: table-cell;
+            width: 100%;
+            padding: 15px 30px;
+            text-align: left;
+            border-right: 4px solid transparent;
+            border-top: 20px solid #f0f2f5;
+        }
+        .study-drawer td:last-child {
+            border-right: none;
+        }
+        .study-drawer .action-btn {
+            padding: 6px 20px;
+            font-size: 12px;
+            min-width: 100px;
+            margin: 0 2px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        @keyframes slideDown {
+            from { max-height: 0; opacity: 0; }
+            to { max-height: 60px; opacity: 1; }
+        }
+        .action-btn.stone-btn { background-color: #4CAF50; color: white; }
+        .action-btn.ohif-btn { background-color: #AB47BC; color: white; }
+        .action-btn.download-btn { background-color: #FF9800; color: white; }
+        .action-btn.report-btn { background-color: #F44336; color: white; }
+        .action-btn.pacs-btn { background-color: #26A69A; color: white; }
+        .action-btn.anonymize-btn { background-color: #9E9E9E; color: white; }
+        .action-btn.volview-btn { background-color: #2196F3; color: white; }
+        .action-btn.meddream-btn { background-color: #8D6E63; color: white; }
+        .action-btn:hover {
+            opacity: 0.9;
+        }
+        .more-options {
+            position: relative;
+            cursor: pointer;
+            padding: 5px;
+        }
+        .more-options:hover .more-options-content {
+            display: block;
+        }
+        .more-options-content {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            min-width: 150px;
+        }
+        .more-options-content a {
+            display: block;
+            padding: 8px 12px;
+            color: #333;
+            text-decoration: none;
+        }
+        .more-options-content a:hover {
+            background: #f0f2f5;
+        }
+        .study-item {
+            min-width: 340px; padding: 20px; border-radius: 15px; background: linear-gradient(135deg, #ffffff, #e8eef3); box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15); transition: transform 0.3s ease, box-shadow 0.3s ease; cursor: pointer; border-left: 6px solid #1976d2; display: flex; align-items: flex-start;
+        }
+        .study-item:hover { transform: translateY(-8px); box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); }
+        .study-item.new { border-left: 6px solid #e65100; background: linear-gradient(135deg, #fff8e1, #ffe082); }
+        .study-checkbox { margin-right: 10px; cursor: pointer; }
+        .study-details { display: flex; flex-direction: column; flex: 1; }
+        .study-name { color: #1a237e; font-weight: 700; font-size: 18px; margin-bottom: 10px; display: flex; align-items: center; }
+        .study-name i { margin-right: 10px; color: #1976d2; font-size: 20px; }
+        .study-meta { font-size: 14px; color: #263238; font-weight: 500; line-height: 1.8; }
+        .study-meta span { display: block; }
+        .study-meta strong { color: #0d47a1; font-weight: 600; }
+        .study-actions { margin-top: 10px; display: flex; gap: 10px; }
+        .study-status { display: flex; align-items: center; gap: 10px; margin-left: 10px; }
+        .status-icon { font-size: 16px; position: relative; }
+        .status-icon[title]:hover::after {
+            content: attr(title); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; white-space: nowrap; z-index: 10;
+        }
+        .viewed { color: #4caf50; }
+        .not-viewed { color: #888; }
+        .worked { color: #2196f3; }
+        .not-worked { color: #888; }
+        .report-status { margin-left: 10px; font-size: 16px; position: relative; }
+        .report-status.reported { color: #4caf50; }
+        .report-status.unreported { color: #888; }
+        .report-status[title]:hover::after {
+            content: attr(title); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 5px 10px; border-radius: 4px; font-size: 12px; white-space: nowrap; z-index: 10;
+        }
+        .assign-form { display: flex; align-items: center; gap: 10px; }
+        .assign-form select { padding: 5px; border: 1px solid #ddd; border-radius: 4px; flex: 1; background: white; }
+        .action-btn {
+            background: #3498db; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; transition: background 0.3s; font-size: 14px;
+        }
+        .action-btn:hover { background: #2980b9; }
+        .action-btn:disabled { background: #ccc; cursor: not-allowed; }
+        .action-btn.view-btn { background: #4caf50; padding: 6px 10px; font-size: 13px; }
+        .action-btn.view-btn:hover { background: #45a049; }
+        .action-btn.ohif-btn { background: #7b1fa2; }
+        .action-btn.ohif-btn:hover { background: #4a0072; }
+        .unassign-btn { background: #e74c3c; color: white; border: none; padding: 5px 15px; border-radius: 4px; cursor: pointer; transition: background 0.3s; }
+        .unassign-btn:hover { background: #c0392b; }
+        .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+        .metadata-modal, .share-modal, .report-status-modal {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;
+        }
+        .metadata-modal.active, .share-modal.active, .report-status-modal.active { display: block; }
+        .metadata-modal h3, .share-modal h3, .report-status-modal h3 { margin-bottom: 15px; color: #2c3e50; font-size: 20px; }
+        .metadata-modal p, .report-status-modal p { margin: 5px 0; color: #333; font-size: 14px; }
+        .close-modal { position: absolute; right: 15px; top: 15px; cursor: pointer; font-size: 20px; color: #666; background: none; border: none; }
+        .close-modal:hover { color: #333; }
+        .share-modal .share-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
+        .share-modal .share-tabs button { background: none; border: none; padding: 10px 20px; font-size: 16px; color: #2c3e50; cursor: pointer; transition: color 0.3s, border-bottom 0.3s; }
+        .share-modal .share-tabs button.active { color: #3498db; border-bottom: 2px solid #3498db; }
+        .share-modal .share-tabs button:hover { color: #2980b9; }
+        .share-modal .share-tab-content { display: none; }
+        .share-modal .share-tab-content.active { display: block; }
+        .share-modal .form-group { margin-bottom: 15px; }
+        .share-modal .form-group label { display: block; margin-bottom: 5px; color: #2c3e50; }
+        .share-modal .form-group input, .share-modal .form-group select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .share-modal .action-btn { width: 100%; margin-top: 10px; }
+        .search-section { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .search-section.active { display: block; }
+        .search-section .search-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .search-section .form-group { display: flex; flex-direction: column; }
+        .search-section .form-group label { font-weight: 500; color: #2c3e50; margin-bottom: 5px; }
+        .search-section .form-group input, .search-section .form-group select { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .search-section .button-group { grid-column: 1 / -1; display: flex; gap: 10px; }
+        .search-results { margin-top: 20px; }
+        .search-results h3 { margin-bottom: 15px; color: #2c3e50; }
+        .user-list { max-height: 300px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; padding: 5px; }
+        .user-list::-webkit-scrollbar { width: 8px; }
+        .user-list::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        .user-list::-webkit-scrollbar-thumb:hover { background: #555; }
+        .user-item { padding: 10px; cursor: pointer; border-radius: 4px; transition: background 0.3s; display: flex; align-items: center; gap: 10px; }
+        .user-item:hover { background: #f0f2f5; }
+        .user-item.selected { background: #3498db; color: white; }
+        .user-item i { font-size: 16px; }
+        .loading-spinner { display: flex; justify-content: center; align-items: center; height: 100%; }
+        .loading-spinner::after {
+            content: ''; width: 30px; height: 30px; border: 4px solid #ffffff; border-top: 4px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="sidebar" id="sidebar">
+        <button class="toggle-sidebar-btn" id="toggleSidebarBtn"><i class="fas fa-bars"></i></button>
+        <div class="profile">
+            <img src="./Guests/profile-placeholder.jpg" alt="Profile" class="profile-img" id="profilePic">
+            <span class="profile-name" id="userName">User Name</span>
+        </div>
+        <div class="loading-spinner" id="sidebarLoading"></div>
+        <div id="sidebarMenu"></div>
+    </div>
+    <div class="main-content" id="mainContent">
+        <div class="welcome" id="welcomeMessage"></div>
+        <div class="search-section" id="searchSection">
+            <h3>Search Studies</h3>
+            <form class="search-form" id="searchForm">
+                <div class="form-group"><label for="searchPatientName">Patient Name</label><input type="text" id="searchPatientName" placeholder="e.g., John Doe"></div>
+                <div class="form-group"><label for="searchPatientID">Patient ID</label><input type="text" id="searchPatientID" placeholder="e.g., P12345"></div>
+                <div class="form-group"><label for="searchStudyDateFrom">Study Date (From)</label><input type="date" id="searchStudyDateFrom"></div>
+                <div class="form-group"><label for="searchStudyDateTo">Study Date (To)</label><input type="date" id="searchStudyDateTo"></div>
+                <div class="form-group"><label for="searchModality">Modality</label>
+                    <select id="searchModality"><option value="">Any</option><option value="CT">CT</option><option value="MRI">MRI</option><option value="CR">CR</option><option value="DX">DX</option><option value="US">US</option></select>
+                </div>
+                <div class="form-group"><label for="searchStudyDescription">Study Description</label><input type="text" id="searchStudyDescription" placeholder="e.g., Chest CT"></div>
+                <div class="form-group"><label for="searchAccessionNumber">Accession Number</label><input type="text" id="searchAccessionNumber" placeholder="e.g., A123456"></div>
+                <div class="form-group"><label for="searchReferringPhysician">Referring Physician</label><input type="text" id="searchReferringPhysician" placeholder="e.g., Dr. Smith"></div>
+                <div class="form-group"><label for="searchStudyStatus">Study Status</label>
+                    <select id="searchStudyStatus"><option value="">Any</option><option value="New">New</option><option value="Reviewed">Reviewed</option><option value="Reported">Reported</option></select>
+                </div>
+                <div class="form-group"><label for="searchLabels">Labels</label><input type="text" id="searchLabels" placeholder="e.g., Urgent, Follow-Up"></div>
+                <div class="button-group">
+                    <button type="submit" class="action-btn">Search</button>
+                    <button type="button" class="action-btn" id="resetSearchBtn">Reset</button>
+                </div>
+            </form>
+            <div class="search-results" id="searchResults">
+                <h3 id="searchResultsHeader">Search Results</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <button class="action-btn" id="shareSelectedBtn">Share Selected</button>
+                    <button class="action-btn pacs-btn" id="sendToPACSBtn">Send to PACS</button>
+                </div>
+                <table class="search-results-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAllSearch"></th>
+                            <th>ID</th>
+                            <th>Patient</th>
+                            <th>Study</th>
+                            <th>Date</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="searchResultsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="dashboard-grid">
+            <div class="card"><i class="fas fa-clock"></i><h3>Recent Studies</h3><p>View your recently uploaded studies</p></div>
+            <div class="card"><i class="fas fa-tasks"></i><h3>Assigned Studies</h3><p>Check studies assigned to you</p></div>
+            <div class="card"><i class="fas fa-database"></i><h3>Database</h3><p>Access the full study database</p></div>
+        </div>
+        <div class="recent-studies-section" id="recentStudiesSection">
+            <h3>Recent Studies</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button class="action-btn" id="shareSelectedBtn">Share Selected</button>
+                <button class="action-btn pacs-btn" id="sendToPACSBtn">Send to PACS</button>
+            </div>
+            <table class="recent-studies-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="selectAllRecent"></th>
+                        <th>ID</th>
+                        <th>Patient</th>
+                        <th>Study</th>
+                        <th>Date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="recentStudiesTableBody"></tbody>
+            </table>
+        </div>
+        <div class="assignment-section" id="assignmentSection">
+            <h3>Assigned Studies</h3>
+            <table class="assigned-studies-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="selectAllAssigned"></th>
+                        <th>ID</th>
+                        <th>Patient</th>
+                        <th>Study</th>
+                        <th>Date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="assignedStudiesTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="metadata-modal" id="metadataModal">
+        <span class="close-modal" id="closeMetadataModal">×</span>
+        <h3>Study Metadata</h3>
+        <div id="studyMetadata"></div>
+    </div>
+    <div class="share-modal" id="shareModal">
+        <span class="close-modal" id="closeShareModal">×</span>
+        <h3>Share Selected Studies</h3>
+        <div class="share-tabs">
+            <button class="share-tab-btn active" data-tab="email">Email</button>
+            <button class="share-tab-btn" data-tab="local">Local</button>
+        </div>
+        <div class="share-tab-content active" id="share-email">
+            <div class="form-group"><label for="shareEmailRecipient">Recipient Email</label><input type="email" id="shareEmailRecipient" placeholder="e.g., patient@domain.com"></div>
+            <button class="action-btn" id="shareEmailBtn">Share as Email</button>
+        </div>
+        <div class="share-tab-content" id="share-local">
+            <div class="form-group"><label for="shareLocalPath">Local Share Directory</label><input type="text" id="shareLocalPath" placeholder="e.g., /shared/studies"></div>
+            <div class="form-group"><label for="shareLocalMethod">Share Method</label>
+                <select id="shareLocalMethod"><option value="file">File Copy</option><option value="network">Network Share</option></select>
+            </div>
+            <button class="action-btn" id="shareLocalBtn">Share Locally</button>
+        </div>
+    </div>
+    <div class="report-status-modal" id="reportStatusModal">
+        <span class="close-modal" id="closeReportStatusModal">×</span>
+        <h3>Reporting Not Allowed</h3>
+        <div id="reportStatusMessage"></div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            let orthancUrl = '';
+            let selectedStudies = new Set();
+            let selectedUser = null;
+            let userPermissions = [];
+
+            try {
+                const response = await fetch('/api/config/orthanc', {
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const config = await response.json();
+                orthancUrl = config.orthanc_url;
+            } catch (error) {
+                console.error('Error fetching Orthanc config:', error);
+                alert('Failed to load Orthanc configuration. Please contact support.');
+                return;
+            }
+
+            function parseJwt(token) {
+                try {
+                    const base64Url = token.split('.')[1];
+                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                    }).join(''));
+                    return JSON.parse(jsonPayload);
+                } catch (e) {
+                    console.error('Error parsing JWT:', e);
+                    return null;
+                }
+            }
+
+            function getCurrentUser() {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) {
+                    alert('No user logged in. Redirecting to login.');
+                    window.location.href = '/login.html';
+                    return null;
+                }
+                const payload = parseJwt(token);
+                return payload ? payload.sub : null;
+            }
+
+            async function fetchUserPermissions() {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) {
+                    alert('No user logged in. Redirecting to login.');
+                    window.location.href = '/login.html';
+                    return [];
+                }
+                try {
+                    const response = await fetch('/api/current-user', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const userData = await response.json();
+                    return userData.permissions.map(perm => perm.name);
+                } catch (error) {
+                    console.error('Error fetching user permissions:', error);
+                    alert('Failed to load user permissions. Please log in again.');
+                    window.location.href = '/login.html';
+                    return [];
+                }
+            }
+
+            const menuItemsConfig = [
+                { id: 'menuMails', permission: 'view_mails', icon: 'fas fa-envelope', text: 'Mails', badgeId: 'mailCount', badgeValue: '0' },
+                { id: 'menuRecentStudies', permission: 'view_recent_studies', icon: 'fas fa-clock', text: 'Recent Studies', badgeId: 'recentCount', badgeValue: '0' },
+                { id: 'menuAssignedStudies', permission: 'view_assigned_studies', icon: 'fas fa-tasks', text: 'Assigned Studies', badgeId: 'assignedCount', badgeValue: '0' },
+                { id: 'menuDatabase', permission: 'view_system', icon: 'fas fa-database', text: 'View Entire Database' },
+                { id: 'menuSearchStudies', permission: 'search_studies', icon: 'fas fa-search', text: 'Search Studies' },
+                { 
+                    id: 'menuShare', 
+                    permission: 'share_studies', 
+                    icon: 'fas fa-share-alt', 
+                    text: 'Share', 
+                    isDropdown: true, 
+                    dropdownItems: [
+                        { class: 'dropdown-item', dataShareTab: 'email', text: 'Share as Email' },
+                        { class: 'dropdown-item', dataShareTab: 'local', text: 'Share Locally' }
+                    ]
+                },
+                { id: 'menuCreateReport', permission: 'create_report', icon: 'fas fa-file-alt', text: 'Create a Report' },
+                { id: 'menuActiveReporting', permission: 'create_report', icon: 'fas fa-file-medical', text: 'Active Reporting' },
+                { id: 'menuStatistics', permission: 'view_statistics', icon: 'fas fa-chart-bar', text: 'View Statistics' },
+                { id: 'menuAIAnalysis', permission: 'use_ai', icon: 'fas fa-robot', text: 'AI Analysis', url: '/ai-analysis.html' },
+                { id: 'menuAdminPanel', permission: 'manage_users', icon: 'fas fa-user-cog', text: 'Admin Panel' },
+                { id: 'menuAssignments', permission: 'assign_studies', icon: 'fas fa-tasks', text: 'Manage Assignments', url: '/assign.html' },
+                { id: 'menuLogout', icon: 'fas fa-sign-out-alt', text: 'Logout' }
+            ];
+
+            async function renderSidebar() {
+                userPermissions = await fetchUserPermissions();
+                const sidebarMenu = document.getElementById('sidebarMenu');
+                sidebarMenu.innerHTML = '';
+                document.getElementById('sidebarLoading').style.display = 'none';
+
+                menuItemsConfig.forEach(item => {
+                    if (item.permission && !userPermissions.includes(item.permission)) return;
+
+                    const menuItem = document.createElement('div');
+                    menuItem.className = `menu-item ${item.isDropdown ? 'dropdown' : ''}`;
+                    menuItem.id = item.id;
+
+                    if (item.permission) {
+                        menuItem.setAttribute('data-permission', item.permission);
+                    }
+
+                    let innerHTML = `<i class="${item.icon}"></i> <span>${item.text}</span>`;
+                    if (item.badgeId) {
+                        innerHTML += ` <span class="badge" id="${item.badgeId}">${item.badgeValue}</span>`;
+                    }
+
+                    if (item.isDropdown) {
+                        const dropdownContent = document.createElement('div');
+                        dropdownContent.className = 'dropdown-content';
+                        item.dropdownItems.forEach(dropdownItem => {
+                            const a = document.createElement('a');
+                            a.href = '#';
+                            a.className = dropdownItem.class;
+                            a.setAttribute('data-share-tab', dropdownItem.dataShareTab);
+                            a.textContent = dropdownItem.text;
+                            dropdownContent.appendChild(a);
+                        });
+                        menuItem.innerHTML = innerHTML;
+                        menuItem.appendChild(dropdownContent);
+                    } else {
+                        menuItem.innerHTML = innerHTML;
+                    }
+
+                    if (item.url) {
+                        menuItem.addEventListener('click', () => window.location.href = item.url);
+                    }
+                    sidebarMenu.appendChild(menuItem);
+                });
+
+                attachSidebarEventListeners();
+            }
+
+            function attachSidebarEventListeners() {
+                const menuMails = document.getElementById('menuMails');
+                const menuRecentStudies = document.getElementById('menuRecentStudies');
+                const menuAssignedStudies = document.getElementById('menuAssignedStudies');
+                const menuDatabase = document.getElementById('menuDatabase');
+                const menuSearchStudies = document.getElementById('menuSearchStudies');
+                const menuCreateReport = document.getElementById('menuCreateReport');
+                const menuActiveReporting = document.getElementById('menuActiveReporting');
+                const menuStatistics = document.getElementById('menuStatistics');
+                const menuAIAnalysis = document.getElementById('menuAIAnalysis');
+                const menuAdminPanel = document.getElementById('menuAdminPanel');
+                const menuLogout = document.getElementById('menuLogout');
+                const dropdownItems = document.querySelectorAll('.dropdown-item');
+
+                if (menuMails) menuMails.addEventListener('click', () => {
+                    updateMailCount();
+                    window.location.href = '/email.html?section=inbox';
+                });
+                if (menuRecentStudies) menuRecentStudies.addEventListener('click', () => toggleSection('recentStudiesSection', 'menuRecentStudies'));
+                if (menuAssignedStudies) menuAssignedStudies.addEventListener('click', () => toggleSection('assignmentSection', 'menuAssignedStudies'));
+                if (menuDatabase) menuDatabase.addEventListener('click', viewOrthancExplorer);
+                if (menuSearchStudies) menuSearchStudies.addEventListener('click', () => toggleSection('searchSection', 'menuSearchStudies'));
+                if (menuCreateReport) menuCreateReport.addEventListener('click', createReport);
+                if (menuActiveReporting) menuActiveReporting.addEventListener('click', () => window.location.href = '/active-reporting.html');
+                if (menuStatistics) menuStatistics.addEventListener('click', () => window.location.href = '/stats.html');
+                if (menuAIAnalysis) menuAIAnalysis.addEventListener('click', () => window.location.href = '/ai-analysis.html');
+                if (menuAdminPanel) menuAdminPanel.addEventListener('click', () => window.location.href = '/admin.html');
+                if (menuLogout) menuLogout.addEventListener('click', logout);
+                dropdownItems.forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        showShareModal(item.dataset.shareTab);
+                    });
+                });
+            }
+
+            function getGreeting() {
+                const hour = new Date().getHours();
+                const currentDate = new Date();
+                const options = { weekday: 'long', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Africa/Lagos' };
+                const formattedTime = currentDate.toLocaleTimeString('en-US', options).replace('AM', 'AM WAT').replace('PM', 'PM WAT');
+                const day = currentDate.toLocaleDateString('en-US', { weekday: 'long' });
+                return hour < 12 ? `Good Morning, ${currentUser}, ${formattedTime} ${day}` : hour < 17 ? `Good Afternoon, ${currentUser}, ${formattedTime} ${day}` : `Good Evening, ${currentUser}, ${formattedTime} ${day}`;
+            }
+
+            async function updateMailCount() {
+                const count = await fetchMailCount();
+                const mailCount = document.getElementById('mailCount');
+                if (mailCount) mailCount.textContent = count;
+            }
+
+            async function updateRecentStudies(count) {
+                const recentCount = document.getElementById('recentCount');
+                if (recentCount) recentCount.textContent = count;
+            }
+
+            async function updateAssignedStudies(count) {
+                const assignedCount = document.getElementById('assignedCount');
+                if (assignedCount) assignedCount.textContent = count;
+            }
+
+            function toggleSidebar() {
+                document.getElementById('sidebar').classList.toggle('minimized');
+                document.getElementById('mainContent').classList.toggle('minimized');
+            }
+
+            function logout() {
+                localStorage.removeItem('token');
+                sessionStorage.removeItem('token');
+                window.location.href = '/login.html';
+            }
+
+            async function toggleSection(sectionId, menuId) {
+                const sections = ['recentStudiesSection', 'assignmentSection', 'searchSection'];
+                const menus = ['menuRecentStudies', 'menuAssignedStudies', 'menuSearchStudies'];
+                sections.forEach(s => {
+                    const section = document.getElementById(s);
+                    section.classList.toggle('active', s === sectionId);
+                    if (s === 'recentStudiesSection' && sectionId === 'recentStudiesSection' && userPermissions.includes('view_recent_studies')) {
+                        fetchRecentStudies();
+                    }
+                    if (s === 'assignmentSection' && sectionId === 'assignmentSection' && userPermissions.includes('view_assigned_studies')) {
+                        fetchAssignedStudies();
+                    }
+                });
+                menus.forEach(m => {
+                    const menuElement = document.getElementById(m);
+                    if (menuElement) menuElement.classList.toggle('active', m === menuId);
+                });
+                if (sectionId === 'searchSection') resetSearch();
+            }
+
+            async function logReportStart(studyId) {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) {
+                    alert('No user logged in. Redirecting to login.');
+                    window.location.href = '/login.html';
+                    return;
+                }
+                if (!studyId) {
+                    console.warn('No studyId found, skipping log');
+                    return;
+                }
+                try {
+                    const response = await fetch('/api/reports/start', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ study_id: studyId })
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    console.log('Report start logged successfully');
+                } catch (error) {
+                    console.error('Error logging report start:', error);
+                    alert('Failed to log report start. Please try again.');
+                }
+            }
+
+            async function viewInStoneViewer(studyInstanceUID, studyId) {
+                if (!studyInstanceUID) {
+                    alert('No study selected.');
+                    return;
+                }
+                await logReportStart(studyId);
+                const stoneViewerUrl = `${orthancUrl}/stone-webviewer/index.html?study=${encodeURIComponent(studyInstanceUID)}`;
+                window.open(stoneViewerUrl, '_blank');
+            }
+
+            async function viewInOHIFViewer(studyInstanceUID, studyId) {
+                if (!studyInstanceUID) {
+                    alert('No study selected.');
+                    return;
+                }
+                await logReportStart(studyId);
+                const ohifViewerUrl = `/ohif/viewer?StudyInstanceUIDs=${encodeURIComponent(studyInstanceUID)}`;
+                window.open(ohifViewerUrl, '_blank');
+            }
+
+            function viewInVolView(studyInstanceUID) {
+                if (!studyInstanceUID) {
+                    alert('No study selected.');
+                    return;
+                }
+                const volViewUrl = `/volview?study=${encodeURIComponent(studyInstanceUID)}`;
+                window.open(volViewUrl, '_blank');
+            }
+
+            function viewInMedDreamViewer(studyInstanceUID) {
+                if (!studyInstanceUID) {
+                    alert('No study selected.');
+                    return;
+                }
+                const medDreamUrl = `/meddream?study=${encodeURIComponent(studyInstanceUID)}`;
+                window.open(medDreamUrl, '_blank');
+            }
+
+            function viewOrthancExplorer() {
+                window.location.href = `${orthancUrl}/ui/app/index.html`;
+            }
+
+            async function fetchAssignedStudiesForFilter() {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) return [];
+                try {
+                    const response = await fetch('/api/studies/assigned', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    if (!response.ok) {
+                        if (response.status === 403) {
+                            console.log('User lacks permission to view assigned studies.');
+                            return [];
+                        }
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    const studies = await response.json();
+                    return studies.map(study => study.study_id);
+                } catch (error) {
+                    console.error('Fetch assigned studies for filter error:', error);
+                    return [];
+                }
+            }
+
+            async function fetchRecentStudies() {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) {
+                    alert('No user logged in. Redirecting to login.');
+                    window.location.href = '/login.html';
+                    return;
+                }
+                try {
+                    const assignedStudyIds = await fetchAssignedStudiesForFilter();
+                    const response = await fetch('/api/orthanc/recent-studies', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    if (!response.ok) {
+                        if (response.status === 403) {
+                            console.log('User lacks permission to view recent studies.');
+                            return;
+                        }
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    const studies = await response.json();
+                    const tbody = document.getElementById('recentStudiesTableBody');
+                    tbody.innerHTML = '';
+                    let count = 0;
+                    const reportedStudies = JSON.parse(localStorage.getItem(`reportedStudies_${currentUser}`) || '[]');
+                    const renderedStudyIds = new Set();
+
+                    for (let study of studies) {
+                        if (assignedStudyIds.includes(study.id) || renderedStudyIds.has(study.id)) continue;
+                        renderedStudyIds.add(study.id);
+
+                        const isNew = study.study_date && new Date(study.study_date.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')) >= new Date(Date.now() - 24 * 60 * 60 * 1000);
+                        const isReported = reportedStudies.includes(study.id);
+                        const row = document.createElement('tr');
+                        row.dataset.studyId = study.id;
+                        row.innerHTML = `
+                            <td><input type="checkbox" class="study-checkbox" data-study-id="${study.id}"></td>
+                            <td>${study.patient_id || 'N/A'}</td>
+                            <td>${study.patient_name || 'Unknown'}</td>
+                            <td>${study.study_description || 'N/A'}</td>
+                            <td>${study.study_date ? study.study_date.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') : 'N/A'}</td>
+                            <td><span class="more-options">...<div class="more-options-content">
+                                <a href="#" data-action="pacs" data-study-id="${study.id}">Send to PACS</a>
+                                <a href="#" data-action="comment" data-study-id="${study.id}">Leave a Comment</a>
+                                <a href="#" data-action="download" data-study-id="${study.id}">Download</a>
+                                <a href="#" data-action="report" data-study-id="${study.id}">Create a Report</a>
+                            </div></span></td>
+                        `;
+                        const drawer = document.createElement('tr');
+                        drawer.className = 'study-drawer';
+                        drawer.dataset.studyId = study.id;
+                        drawer.innerHTML = `
+                            <td colspan="6">
+                                <button class="action-btn stone-btn" data-action="stone" data-study-instance-uid="${study.study_instance_uid}" data-study-id="${study.id}"><i class="fas fa-eye"></i> View in Stone</button>
+                                <button class="action-btn ohif-btn" data-action="ohif" data-study-instance-uid="${study.study_instance_uid}" data-study-id="${study.id}"><i class="fas fa-eye"></i> View in OHIF</button>
+                                <button class="action-btn download-btn" data-action="download" data-study-id="${study.id}">Download</button>
+                                <button class="action-btn report-btn" data-action="report" data-study-id="${study.id}">Create Report</button>
+                                <button class="action-btn volview-btn" data-action="volview" data-study-instance-uid="${study.study_instance_uid}"><i class="fas fa-eye"></i> View in VolView</button>
+                                <button class="action-btn meddream-btn" data-action="meddream" data-study-instance-uid="${study.study_instance_uid}"><i class="fas fa-eye"></i> View in MedDream</button>
+                            </td>
+                        `;
+                        row.addEventListener('click', (e) => {
+                            if (!e.target.closest('.more-options') && !e.target.classList.contains('study-checkbox')) toggleDrawer(row, drawer);
+                        });
+                        tbody.appendChild(row);
+                        tbody.appendChild(drawer);
+                        count++;
+                    }
+                    updateRecentStudies(count);
+                } catch (error) {
+                    console.error('Fetch recent studies error:', error);
+                    alert('Failed to fetch recent studies due to an unexpected error. Please try again.');
+                }
+            }
+
+            async function fetchAssignedStudies() {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) {
+                    alert('No user logged in. Redirecting to login.');
+                    window.location.href = '/login.html';
+                    return;
+                }
+                try {
+                    const response = await fetch('/api/studies/assigned', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    if (!response.ok) {
+                        if (response.status === 403) {
+                            console.log('User lacks permission to view assigned studies.');
+                            return;
+                        }
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    const studies = await response.json();
+                    const tbody = document.getElementById('assignedStudiesTableBody');
+                    tbody.innerHTML = '';
+                    let count = 0;
+                    const reportedStudies = JSON.parse(localStorage.getItem(`reportedStudies_${currentUser}`) || '[]');
+                    const userStudies = studies.filter(study => study.assigned_to === currentUser);
+                    const renderedStudyIds = new Set();
+
+                    for (let study of userStudies) {
+                        if (renderedStudyIds.has(study.study_id)) continue;
+                        renderedStudyIds.add(study.study_id);
+
+                        const isReported = reportedStudies.includes(study.study_id);
+                        const row = document.createElement('tr');
+                        row.dataset.studyId = study.study_id;
+                        row.innerHTML = `
+                            <td><input type="checkbox" class="study-checkbox" data-study-id="${study.study_id}"></td>
+                            <td>${study.patient_id || 'N/A'}</td>
+                            <td>${study.patient_name || 'Unknown'}</td>
+                            <td>${study.study_description || 'N/A'}</td>
+                            <td>${study.study_date ? study.study_date.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') : 'N/A'}</td>
+                            <td><span class="more-options">...<div class="more-options-content">
+                                <a href="#" data-action="pacs" data-study-id="${study.study_id}">Send to PACS</a>
+                                <a href="#" data-action="comment" data-study-id="${study.study_id}">Leave a Comment</a>
+                                <a href="#" data-action="download" data-study-id="${study.study_id}">Download</a>
+                                <a href="#" data-action="report" data-study-id="${study.study_id}">Create a Report</a>
+                            </div></span></td>
+                        `;
+                        const drawer = document.createElement('tr');
+                        drawer.className = 'study-drawer';
+                        drawer.dataset.studyId = study.study_id;
+                        drawer.innerHTML = `
+                            <td colspan="6">
+                                <button class="action-btn stone-btn" data-action="stone" data-study-instance-uid="${study.study_instance_uid}" data-study-id="${study.id}"><i class="fas fa-eye"></i> View in Stone</button>
+                                <button class="action-btn ohif-btn" data-action="ohif" data-study-instance-uid="${study.study_instance_uid}" data-study-id="${study.id}"><i class="fas fa-eye"></i> View in OHIF</button>
+                                <button class="action-btn download-btn" data-action="download" data-study-id="${study.study_id}">Download</button>
+                                <button class="action-btn report-btn" data-action="report" data-study-id="${study.study_id}">Create Report</button>
+                                <button class="action-btn volview-btn" data-action="volview" data-study-instance-uid="${study.study_instance_uid}"><i class="fas fa-eye"></i> View in VolView</button>
+                                <button class="action-btn meddream-btn" data-action="meddream" data-study-instance-uid="${study.study_instance_uid}"><i class="fas fa-eye"></i> View in MedDream</button>
+                            </td>
+                        `;
+                        row.addEventListener('click', (e) => {
+                            if (!e.target.closest('.more-options') && !e.target.classList.contains('study-checkbox')) toggleDrawer(row, drawer);
+                        });
+                        tbody.appendChild(row);
+                        tbody.appendChild(drawer);
+                        count++;
+                    }
+                    updateAssignedStudies(count);
+                } catch (error) {
+                    console.error('Fetch assigned studies error:', error);
+                    alert('Failed to fetch assigned studies due to an unexpected error. Please try again.');
+                }
+            }
+
+            async function refreshAfterAssignment() {
+                await fetchRecentStudies();
+                await fetchAssignedStudies();
+            }
+
+            window.addEventListener('studyAssigned', () => {
+                refreshAfterAssignment();
+            });
+
+            function updateSelectedStudies(studyId, checked) {
+                if (checked) selectedStudies.add(studyId);
+                else selectedStudies.delete(studyId);
+            }
+
+            async function showStudyMetadata(studyId) {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) {
+                    alert('No user logged in. Redirecting to login.');
+                    window.location.href = '/login.html';
+                    return;
+                }
+                try {
+                    const response = await fetch(`/api/orthanc/studies/${studyId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const metadata = await response.json();
+                    document.getElementById('studyMetadata').innerHTML = `
+                        <p><strong>Study Instance UID:</strong> ${metadata.study_instance_uid}</p>
+                        <p><strong>Patient ID:</strong> ${metadata.patient_id}</p>
+                        <p><strong>Patient Name:</strong> ${metadata.patient_name}</p>
+                        <p><strong>Study Date:</strong> ${metadata.study_date}</p>
+                        <p><strong>Study Description:</strong> ${metadata.study_description}</p>
+                        <p><strong>Modalities:</strong> ${metadata.modalities}</p>
+                        <p><strong>Labels:</strong> ${metadata.labels.join(', ') || 'None'}</p>
+                    `;
+                    document.getElementById('metadataModal').classList.add('active');
+                } catch (error) {
+                    console.error('Error fetching metadata:', error);
+                    alert('Failed to fetch study metadata.');
+                }
+            }
+
+            function closeMetadataModal() {
+                document.getElementById('metadataModal').classList.remove('active');
+            }
+
+            function closeReportStatusModal() {
+                document.getElementById('reportStatusModal').classList.remove('active');
+            }
+
+            function showShareModal(tab) {
+                if (selectedStudies.size === 0) {
+                    alert('No studies selected for sharing.');
+                    return;
+                }
+                const modal = document.getElementById('shareModal');
+                const tabs = document.querySelectorAll('.share-modal .share-tab-btn');
+                const contents = document.querySelectorAll('.share-modal .share-tab-content');
+                tabs.forEach(t => t.classList.remove('active'));
+                contents.forEach(c => c.classList.remove('active'));
+                document.querySelector(`.share-tab-btn[data-tab="${tab || 'email'}"]`).classList.add('active');
+                document.getElementById(`share-${tab || 'email'}`).classList.add('active');
+                const settings = JSON.parse(localStorage.getItem('settings')) || {};
+                document.getElementById('shareLocalPath').value = settings.localSharePath || '';
+                document.getElementById('shareLocalMethod').value = settings.localShareMethod || 'file';
+                modal.classList.add('active');
+            }
+
+            function closeShareModal() {
+                document.getElementById('shareModal').classList.remove('active');
+            }
+
+            async function shareViaEmail() {
+                const recipient = document.getElementById('shareEmailRecipient').value;
+                if (!recipient) return alert('Please provide a recipient email address.');
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) {
+                    alert('No user logged in. Redirecting to login.');
+                    window.location.href = '/login.html';
+                    return;
+                }
+                try {
+                    const response = await fetch('/api/orthanc/share/email', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            study_ids: Array.from(selectedStudies),
+                            recipient
+                        })
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    alert(`Shared ${selectedStudies.size} studies to ${recipient}.`);
+                    selectedStudies.clear();
+                    closeShareModal();
+                } catch (error) {
+                    console.error('Share via email error:', error);
+                    alert('Failed to share studies via email.');
+                }
+            }
+
+            async function shareLocally() {
+                const path = document.getElementById('shareLocalPath').value;
+                const shareMethod = document.getElementById('shareLocalMethod').value;
+                if (!path) return alert('Please provide a local share directory.');
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) {
+                    alert('No user logged in. Redirecting to login.');
+                    window.location.href = '/login.html';
+                    return;
+                }
+                try {
+                    const response = await fetch('/api/orthanc/share/local', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            study_ids: Array.from(selectedStudies),
+                            path,
+                            share_method: shareMethod
+                        })
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    alert(`Shared ${selectedStudies.size} studies to ${path}.`);
+                    selectedStudies.clear();
+                    closeShareModal();
+                } catch (error) {
+                    console.error('Share locally error:', error);
+                    alert('Failed to share studies locally.');
+                }
+            }
+
+            async function createReport() {
+                if (selectedStudies.size !== 1) {
+                    alert('Please select exactly one study to create a report.');
+                    return;
+                }
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) {
+                    alert('No user logged in. Redirecting to login.');
+                    window.location.href = '/login.html';
+                    return;
+                }
+                const studyId = Array.from(selectedStudies)[0];
+                const reportedStudies = JSON.parse(localStorage.getItem(`reportedStudies_${currentUser}`) || '[]');
+                if (reportedStudies.includes(studyId)) {
+                    try {
+                        const response = await fetch(`/api/orthanc/studies/${studyId}`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Accept': 'application/json'
+                            }
+                        });
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        const study = await response.json();
+                        document.getElementById('reportStatusMessage').innerHTML = `
+                            <p>This study has been reported and does not require further reporting.</p>
+                            <p><strong>Study:</strong> ${study.study_description}</p>
+                            <p><strong>Patient:</strong> ${study.patient_name}</p>
+                            <p><strong>Date:</strong> ${study.study_date}</p>
+                        `;
+                        document.getElementById('reportStatusModal').classList.add('active');
+                    } catch (error) {
+                        console.error('Error fetching study details:', error);
+                        alert('Failed to fetch study details for status check.');
+                    }
+                    return;
+                }
+                try {
+                    const response = await fetch(`/api/orthanc/studies/${studyId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const study = await response.json();
+                    const params = new URLSearchParams({
+                        studyInstanceUID: study.study_instance_uid,
+                        patientName: study.patient_name || '',
+                        patientID: study.patient_id || '',
+                        modality: study.modalities ? study.modalities.split(',')[0] : ''
+                    });
+                    window.location.href = `/report.html?${params.toString()}`;
+                } catch (error) {
+                    console.error('Error fetching study for report:', error);
+                    alert('Failed to load study details for reporting.');
+                }
+            }
+
+            async function searchStudies(e) {
+                e.preventDefault();
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) {
+                    alert('No user logged in. Redirecting to login.');
+                    window.location.href = '/login.html';
+                    return;
+                }
+                const params = {
+                    patient_name: document.getElementById('searchPatientName').value,
+                    patient_id: document.getElementById('searchPatientID').value,
+                    study_date_from: document.getElementById('searchStudyDateFrom').value,
+                    study_date_to: document.getElementById('searchStudyDateTo').value,
+                    modality: document.getElementById('searchModality').value,
+                    study_description: document.getElementById('searchStudyDescription').value,
+                    accession_number: document.getElementById('searchAccessionNumber').value,
+                    referring_physician: document.getElementById('searchReferringPhysician').value,
+                    study_status: document.getElementById('searchStudyStatus').value,
+                    labels: document.getElementById('searchLabels').value
+                };
+                try {
+                    const response = await fetch('/api/orthanc/search', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(params)
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const studies = await response.json();
+                    const tbody = document.getElementById('searchResultsTableBody');
+                    tbody.innerHTML = '';
+                    if (studies.length === 0) {
+                        document.getElementById('searchResultsHeader').textContent = 'No Results Found';
+                        return;
+                    }
+                    document.getElementById('searchResultsHeader').textContent = `Search Results (${studies.length})`;
+                    const reportedStudies = JSON.parse(localStorage.getItem(`reportedStudies_${currentUser}`) || '[]');
+                    for (let study of studies) {
+                        const isNew = study.study_date && new Date(study.study_date.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')) >= new Date(Date.now() - 24 * 60 * 60 * 1000);
+                        const isReported = reportedStudies.includes(study.id);
+                        const row = document.createElement('tr');
+                        row.dataset.studyId = study.id;
+                        row.innerHTML = `
+                            <td><input type="checkbox" class="study-checkbox" data-study-id="${study.id}"></td>
+                            <td>${study.patient_id || 'N/A'}</td>
+                            <td>${study.patient_name || 'Unknown'}</td>
+                            <td>${study.study_description || 'N/A'}</td>
+                            <td>${study.study_date ? study.study_date.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3') : 'N/A'}</td>
+                            <td><span class="more-options">...<div class="more-options-content">
+                                <a href="#" data-action="pacs" data-study-id="${study.id}">Send to PACS</a>
+                                <a href="#" data-action="comment" data-study-id="${study.id}">Leave a Comment</a>
+                                <a href="#" data-action="download" data-study-id="${study.id}">Download</a>
+                                <a href="#" data-action="report" data-study-id="${study.id}">Create a Report</a>
+                            </div></span></td>
+                        `;
+                        const drawer = document.createElement('tr');
+                        drawer.className = 'study-drawer';
+                        drawer.dataset.studyId = study.id;
+                        drawer.innerHTML = `
+                            <td colspan="6">
+                                <button class="action-btn stone-btn" data-action="stone" data-study-instance-uid="${study.study_instance_uid}" data-study-id="${study.id}"><i class="fas fa-eye"></i> View in Stone</button>
+                                <button class="action-btn ohif-btn" data-action="ohif" data-study-instance-uid="${study.study_instance_uid}" data-study-id="${study.id}"><i class="fas fa-eye"></i> View in OHIF</button>
+                                <button class="action-btn download-btn" data-action="download" data-study-id="${study.id}">Download</button>
+                                <button class="action-btn report-btn" data-action="report" data-study-id="${study.id}">Create Report</button>
+                                <button class="action-btn volview-btn" data-action="volview" data-study-instance-uid="${study.study_instance_uid}"><i class="fas fa-eye"></i> View in VolView</button>
+                                <button class="action-btn meddream-btn" data-action="meddream" data-study-instance-uid="${study.study_instance_uid}"><i class="fas fa-eye"></i> View in MedDream</button>
+                            </td>
+                        `;
+                        row.addEventListener('click', (e) => {
+                            if (!e.target.closest('.more-options') && !e.target.classList.contains('study-checkbox')) toggleDrawer(row, drawer);
+                        });
+                        tbody.appendChild(row);
+                        tbody.appendChild(drawer);
+                    }
+                } catch (error) {
+                    console.error('Search studies error:', error);
+                    alert('Failed to search studies. Please try again.');
+                }
+            }
+
+            function resetSearch() {
+                document.getElementById('searchForm').reset();
+                document.getElementById('searchResultsTableBody').innerHTML = '';
+                document.getElementById('searchResultsHeader').textContent = 'Search Results';
+            }
+
+            async function fetchUsers() {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) {
+                    alert('No user logged in. Redirecting to login.');
+                    window.location.href = '/login.html';
+                    return [];
+                }
+                try {
+                    const response = await fetch('/api/users', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    const users = await response.json();
+                    return users.map(user => ({
+                        id: user.id,
+                        name: user.username
+                    }));
+                } catch (error) {
+                    console.error('Error fetching users:', error);
+                    alert('Failed to fetch users. Please try again.');
+                    return [];
+                }
+            }
+
+            async function fetchMailCount() {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) return 0;
+                try {
+                    const response = await fetch('/api/emails/inbox', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    if (!response.ok) {
+                        if (response.status === 403) {
+                            console.log('User lacks permission to view mails.');
+                            return 0;
+                        }
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    const emails = await response.json();
+                    const unreadCount = emails.filter(email => !email.is_read).length;
+                    return unreadCount;
+                } catch (error) {
+                    console.error('Error fetching mail count:', error);
+                    return 0;
+                }
+            }
+
+            function handleAction(action, studyId, studyInstanceUID) {
+                switch (action) {
+                    case 'stone':
+                        viewInStoneViewer(studyInstanceUID, studyId);
+                        break;
+                    case 'ohif':
+                        viewInOHIFViewer(studyInstanceUID, studyId);
+                        break;
+                    case 'download':
+                        alert(`Download initiated for study ${studyId}`);
+                        break;
+                    case 'report':
+                        selectedStudies.clear();
+                        selectedStudies.add(studyId);
+                        createReport();
+                        break;
+                    case 'pacs':
+                        alert(`Sending study ${studyId} to PACS is not implemented yet`);
+                        break;
+                    case 'anonymize':
+                        alert(`Anonymizing study ${studyId} is not implemented yet`);
+                        break;
+                    case 'volview':
+                        viewInVolView(studyInstanceUID);
+                        break;
+                    case 'meddream':
+                        viewInMedDreamViewer(studyInstanceUID);
+                        break;
+                    case 'comment':
+                        alert(`Leaving a comment for study ${studyId} is not implemented yet`);
+                        break;
+                }
+            }
+
+            function toggleDrawer(row, drawer) {
+                const isActive = drawer.classList.contains('active');
+                document.querySelectorAll('.study-drawer.active').forEach(d => d.classList.remove('active'));
+                if (!isActive) {
+                    drawer.classList.add('active');
+                }
+            }
+
+            // Event delegation for action buttons in table bodies
+            ['recentStudiesTableBody', 'assignedStudiesTableBody', 'searchResultsTableBody'].forEach(tbodyId => {
+                document.getElementById(tbodyId).addEventListener('click', async (e) => {
+                    const button = e.target.closest('.action-btn');
+                    if (button) {
+                        e.stopPropagation();
+                        const studyId = button.dataset.studyId || button.closest('.study-drawer')?.dataset.studyId;
+                        const studyInstanceUID = button.dataset.studyInstanceUid;
+                        const action = button.dataset.action;
+                        await handleAction(action, studyId, studyInstanceUID);
+                    }
+                });
+            });
+
+            document.querySelectorAll('.more-options-content a').forEach(link => {
+                link.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    const studyId = link.dataset.studyId;
+                    const action = link.dataset.action;
+                    await handleAction(action, studyId, null);
+                });
+            });
+
+            // Checkbox and Select All functionality
+            function setupCheckboxes(tbodyId, selectAllId) {
+                const tbody = document.getElementById(tbodyId);
+                const selectAll = document.getElementById(selectAllId);
+                if (tbody && selectAll) {
+                    selectAll.addEventListener('change', () => {
+                        const checkboxes = tbody.querySelectorAll('.study-checkbox');
+                        checkboxes.forEach(checkbox => {
+                            checkbox.checked = selectAll.checked;
+                            updateSelectedStudies(checkbox.dataset.studyId, selectAll.checked);
+                        });
+                    });
+
+                    tbody.addEventListener('change', (e) => {
+                        if (e.target.classList.contains('study-checkbox')) {
+                            const checkbox = e.target;
+                            updateSelectedStudies(checkbox.dataset.studyId, checkbox.checked);
+                            const allChecked = tbody.querySelectorAll('.study-checkbox:checked').length === tbody.querySelectorAll('.study-checkbox').length;
+                            selectAll.checked = allChecked;
+                        }
+                    });
+                }
+            }
+
+            setupCheckboxes('recentStudiesTableBody', 'selectAllRecent');
+            setupCheckboxes('assignedStudiesTableBody', 'selectAllAssigned');
+            setupCheckboxes('searchResultsTableBody', 'selectAllSearch');
+
+            // Button actions for multi-selection
+            document.getElementById('shareSelectedBtn').addEventListener('click', () => showShareModal('email'));
+            document.getElementById('sendToPACSBtn').addEventListener('click', () => {
+                if (selectedStudies.size === 0) {
+                    alert('No studies selected to send to PACS.');
+                    return;
+                }
+                alert(`Sending ${selectedStudies.size} studies to PACS (not implemented yet).`);
+            });
+
+            const currentUser = getCurrentUser();
+            if (currentUser) {
+                if (!localStorage.getItem(`reportedStudies_${currentUser}`)) {
+                    localStorage.setItem(`reportedStudies_${currentUser}`, JSON.stringify([]));
+                }
+                document.getElementById('welcomeMessage').textContent = `${getGreeting()}`;
+                document.getElementById('userName').textContent = currentUser;
+                document.getElementById('profilePic').src = './Guests/profile-placeholder.jpg';
+                await renderSidebar();
+
+                document.getElementById('recentStudiesTableBody').innerHTML = '';
+                document.getElementById('assignedStudiesTableBody').innerHTML = '';
+                document.getElementById('searchResultsTableBody').innerHTML = '';
+
+                if (userPermissions.includes('view_recent_studies')) {
+                    fetchRecentStudies();
+                }
+                if (userPermissions.includes('view_assigned_studies')) {
+                    fetchAssignedStudies();
+                }
+                if (userPermissions.includes('view_mails')) {
+                    updateMailCount();
+                }
+            }
+
+            document.getElementById('toggleSidebarBtn').addEventListener('click', toggleSidebar);
+            document.getElementById('closeMetadataModal').addEventListener('click', closeMetadataModal);
+            document.getElementById('closeReportStatusModal').addEventListener('click', closeReportStatusModal);
+            document.getElementById('closeShareModal').addEventListener('click', closeShareModal);
+            document.getElementById('shareEmailBtn').addEventListener('click', shareViaEmail);
+            document.getElementById('shareLocalBtn').addEventListener('click', shareLocally);
+            document.getElementById('searchForm').addEventListener('submit', searchStudies);
+            document.getElementById('resetSearchBtn').addEventListener('click', resetSearch)
+        });
+    </script>
+</body>
+</html>

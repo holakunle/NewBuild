@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email - Medical Imaging Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: #f5f7fa;
+            color: #333;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Styles (Unchanged) */
+        .sidebar {
+            width: 250px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            height: 100%;
+            position: fixed;
+        }
+
+        .profile {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .profile-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: #ddd;
+            margin-right: 10px;
+            object-fit: cover;
+        }
+
+        .profile-name {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .menu-item {
+            padding: 12px 10px;
+            margin: 8px 0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        .menu-item:hover, .menu-item.active {
+            background: #34495e;
+        }
+
+        .menu-item i {
+            margin-right: 10px;
+            width: 18px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 250px;
+            width: calc(100% - 250px);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: #f5f7fa;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            background: #ffffff;
+            border-bottom: 1px solid #ddd;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2c3e50;
+            flex: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .header-title i {
+            margin-right: 8px;
+            color: #3498db;
+        }
+
+        .header-search {
+            position: relative;
+            width: 300px;
+        }
+
+        .header-search input {
+            width: 100%;
+            padding: 8px 30px 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .header-search i {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #888;
+        }
+
+        /* Email Container */
+        .email-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Email List */
+        .email-list-pane {
+            width: 45%;
+            background: #ffffff;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .email-list-toolbar {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .email-list-toolbar button {
+            background: none;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .email-list-toolbar button i {
+            margin-right: 5px;
+        }
+
+        .email-list-toolbar button:hover {
+            color: #3498db;
+        }
+
+        .email-list-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        .email-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .email-item:hover {
+            background: #f5f7fa;
+        }
+
+        .email-item.selected {
+            background: #e8f0fe;
+        }
+
+        .email-item.internal {
+            background-color: #f0f8ff;
+        }
+
+        .email-item.external {
+            background-color: #fff0f0;
+        }
+
+        .email-checkbox {
+            margin-right: 10px;
+        }
+
+        .email-sender {
+            font-weight: 500;
+            color: #2c3e50;
+            flex: 1;
+        }
+
+        .email-subject {
+            flex: 2;
+            color: #555;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .email-time {
+            font-size: 12px;
+            color: #888;
+            text-align: right;
+            width: 100px;
+        }
+
+        .email-label {
+            margin-left: 10px;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .unread .email-label {
+            background-color: #ffeb3b;
+            color: #333;
+        }
+
+        .read .email-label {
+            background-color: #90ee90;
+            color: #333;
+        }
+
+        /* Email Detail */
+        .email-detail-pane {
+            width: 70%;
+            background: #ffffff;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .email-detail-header {
+            padding: 10px 15px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .email-detail-header .subject {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .email-detail-actions button {
+            background: none;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .email-detail-actions button i {
+            margin-right: 5px;
+        }
+
+        .email-detail-actions button:hover {
+            color: #3498db;
+        }
+
+        .email-detail-content {
+            padding: 15px;
+            flex: 1;
+        }
+
+        .email-detail-meta {
+            margin-bottom: 15px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .email-detail-body {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .email-detail-placeholder {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-style: italic;
+        }
+
+        /* Email Form */
+        .email-form {
+            display: none;
+            flex: 1;
+            padding: 20px;
+            background: #ffffff;
+        }
+
+        .email-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group select,
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: #3498db;
+            outline: none;
+        }
+
+        .form-group textarea {
+            height: 200px;
+            resize: vertical;
+        }
+
+        .form-group input[readonly] {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+
+        /* Buttons */
+        button {
+            background: #3498db;
+            color: #ffffff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        .draft-btn {
+            background: #f39c12;
+            margin-left: 10px;
+        }
+
+        .draft-btn:hover {
+            background: #e67e22;
+        }
+
+        .delete-btn {
+            background: #e74c3c;
+            margin-left: 10px;
+        }
+
+        .delete-btn:hover {
+            background: #c0392b;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+            }
+
+            .main-content {
+                margin-left: 200px;
+                width: calc(100% - 200px);
+            }
+
+            .email-container {
+                flex-direction: column;
+            }
+
+            .email-list-pane, .email-detail-pane {
+                width: 100%;
+            }
+
+            .email-list-pane {
+                height: 40%;
+                border-right: none;
+                border-bottom: 1px solid #ddd;
+            }
+
+            .email-detail-pane {
+                height: 60%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sidebar {
+                width: 60px;
+                padding: 10px;
+            }
+
+            .profile-name, .menu-item span {
+                display: none;
+            }
+
+            .menu-item i {
+                margin-right: 0;
+                font-size: 18px;
+            }
+
+            .main-content {
+                margin-left: 60px;
+                width: calc(100% - 60px);
+            }
+
+            .header-search {
+                width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="profile">
+            <img src="./Guests/profile-placeholder.jpg" alt="Profile" class="profile-img" id="profilePic">
+            <span class="profile-name" id="userName"></span>
+        </div>
+        <div class="menu-item" id="newMail" onclick="showSection('newMail')">
+            <i class="fas fa-plus"></i> <span>New Mail</span>
+        </div>
+        <div class="menu-item active" id="inbox" onclick="showSection('inbox')">
+            <i class="fas fa-inbox"></i> <span>Inbox</span>
+        </div>
+        <div class="menu-item" id="outbox" onclick="showSection('outbox')">
+            <i class="fas fa-paper-plane"></i> <span>Outbox</span>
+        </div>
+        <div class="menu-item" id="sent" onclick="showSection('sent')">
+            <i class="fas fa-check"></i> <span>Sent</span>
+        </div>
+        <div class="menu-item" onclick="window.location.href='/index.html'">
+            <i class="fas fa-arrow-left"></i> <span>Back to Dashboard</span>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <div class="header-title" id="headerTitle">
+                <i class="fas fa-inbox"></i> Inbox
+            </div>
+            <div class="header-search">
+                <input type="text" id="searchInput" placeholder="Search emails...">
+                <i class="fas fa-search"></i>
+            </div>
+        </div>
+
+        <div class="email-form" id="newMailForm">
+            <div class="form-group">
+                <label for="from">From</label>
+                <input type="text" id="from" readonly placeholder="Loading...">
+            </div>
+            <div class="form-group">
+                <label for="recipientType">Recipient Type</label>
+                <select id="recipientType" onchange="toggleRecipientInput()">
+                    <option value="internal">Internal</option>
+                    <option value="external">External</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="recipient">To</label>
+                <input type="text" id="recipient" placeholder="Enter recipient email" style="display: none;">
+                <select id="internalRecipient">
+                    <option value="">Select a user</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="subject">Subject</label>
+                <input type="text" id="subject" placeholder="Enter subject">
+            </div>
+            <div class="form-group">
+                <label for="body">Message</label>
+                <textarea id="body" placeholder="Enter your message"></textarea>
+            </div>
+            <button onclick="sendEmail()">Send Email</button>
+            <button class="draft-btn" onclick="saveDraft()">Save Draft</button>
+        </div>
+
+        <div class="email-container" id="emailContainer">
+            <div class="email-list-pane">
+                <div class="email-list-toolbar">
+                    <div>
+                        <button onclick="fetchEmails(currentSection)"><i class="fas fa-sync"></i> Refresh</button>
+                        <button class="delete-btn" onclick="deleteEmails()" id="deleteButton" style="display: none;"><i class="fas fa-trash"></i> Delete</button>
+                    </div>
+                </div>
+                <div class="email-list-content" id="emailListContent">
+                    <!-- Emails will be populated here -->
+                </div>
+            </div>
+            <div class="email-detail-pane" id="emailDetailPane">
+                <div class="email-detail-placeholder" id="emailDetailPlaceholder">
+                    Select an email to view
+                </div>
+                <div class="email-detail-header" id="emailDetailHeader" style="display: none;">
+                    <div class="subject" id="detailSubject"></div>
+                    <div class="email-detail-actions">
+                        <button onclick="replyEmail()"><i class="fas fa-reply"></i> Reply</button>
+                        <button onclick="forwardEmail()"><i class="fas fa-forward"></i> Forward</button>
+                    </div>
+                </div>
+                <div class="email-detail-content" id="emailDetailContent" style="display: none;">
+                    <div class="email-detail-meta" id="detailMeta"></div>
+                    <div class="email-detail-body" id="detailBody"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedEmails = new Set();
+        let currentSection = 'inbox';
+        let selectedEmail = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const params = new URLSearchParams(window.location.search);
+            const section = params.get('section') || 'inbox';
+            showSection(section);
+
+            function parseJwt(token) {
+                try {
+                    const base64Url = token.split('.')[1];
+                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                    return JSON.parse(jsonPayload);
+                } catch (e) {
+                    console.error('Error parsing JWT:', e);
+                    return null;
+                }
+            }
+
+            function getCurrentUser() {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) {
+                    alert('No user logged in. Redirecting to login.');
+                    window.location.href = '/login.html';
+                    return null;
+                }
+                const payload = parseJwt(token);
+                return payload ? payload.sub : null;
+            }
+
+            async function fetchCurrentUserEmail() {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (!token) return;
+                try {
+                    const response = await fetch('/api/current-user', {
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const user = await response.json();
+                    document.getElementById('from').value = user.email || 'Email not set';
+                } catch (error) {
+                    console.error('Error fetching current user email:', error);
+                    document.getElementById('from').value = 'Failed to load email';
+                }
+            }
+
+            const currentUser = getCurrentUser();
+            if (currentUser) {
+                document.getElementById('userName').textContent = currentUser;
+                document.getElementById('profilePic').src = './Guests/profile-placeholder.jpg';
+            }
+
+            await fetchCurrentUserEmail();
+            await fetchInternalUsers();
+            toggleRecipientInput();
+
+            if (section !== 'newMail') {
+                await fetchEmails(section);
+            }
+
+            document.getElementById('searchInput').addEventListener('input', () => {
+                fetchEmails(currentSection);
+            });
+        });
+
+        async function fetchInternalUsers() {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            if (!token) {
+                console.error('No token found, cannot fetch internal users.');
+                return;
+            }
+            try {
+                const response = await fetch('/api/internal-users', {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                const usernames = await response.json();
+                const select = document.getElementById('internalRecipient');
+                select.innerHTML = '<option value="">Select a user</option>';
+                usernames.forEach(username => {
+                    const option = document.createElement('option');
+                    option.value = username;
+                    option.textContent = username;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error fetching internal users:', error);
+                const select = document.getElementById('internalRecipient');
+                select.innerHTML = '<option value="">No internal users available</option>';
+            }
+        }
+
+        function toggleRecipientInput() {
+            const recipientType = document.getElementById('recipientType').value;
+            const emailInput = document.getElementById('recipient');
+            const userSelect = document.getElementById('internalRecipient');
+            if (recipientType === 'internal') {
+                emailInput.style.display = 'none';
+                userSelect.style.display = 'block';
+                userSelect.focus();
+            } else {
+                emailInput.style.display = 'block';
+                userSelect.style.display = 'none';
+                emailInput.focus();
+            }
+        }
+
+        async function fetchEmails(section) {
+            const validSections = ['inbox', 'outbox', 'sent'];
+            if (!validSections.includes(section)) {
+                console.warn(`Skipping fetchEmails for invalid section: ${section}`);
+                return;
+            }
+
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            if (!token) {
+                alert('No user logged in. Redirecting to login.');
+                window.location.href = '/login.html';
+                return;
+            }
+            try {
+                const response = await fetch(`/api/emails/${section}`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                const emails = await response.json();
+                displayEmails(emails, section);
+            } catch (error) {
+                console.error(`Error fetching ${section} emails:`, error);
+                alert(`Failed to fetch ${section} emails: ${error.message}`);
+            }
+        }
+
+        function displayEmails(emails, section) {
+            const emailContainer = document.getElementById('emailListContent');
+            if (!emailContainer) {
+                console.error('Email list container not found');
+                return;
+            }
+            emailContainer.innerHTML = '';
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            const filteredEmails = emails.filter(email => 
+                email.sender.toLowerCase().includes(searchQuery) ||
+                email.subject.toLowerCase().includes(searchQuery) ||
+                email.body.toLowerCase().includes(searchQuery)
+            );
+
+            filteredEmails.forEach(email => {
+                const emailItem = document.createElement('div');
+                emailItem.className = `email-item ${email.is_external ? 'external' : 'internal'}${section !== 'sent' ? (email.is_read ? ' read' : ' unread') : ''}${selectedEmail && selectedEmail.id === email.id ? ' selected' : ''}`;
+                let htmlContent = `
+                    <input type="checkbox" class="email-checkbox" data-email-id="${email.id}">
+                    <div class="email-sender">${email.sender}</div>
+                    <div class="email-subject">${email.subject}</div>
+                    <div class="email-time">${new Date(email.sent_at).toLocaleString()}</div>
+                `;
+                if (section !== 'sent') {
+                    htmlContent += `<span class="email-label">${email.is_read ? 'Read' : 'Unread'}</span>`;
+                }
+                emailItem.innerHTML = htmlContent;
+                emailItem.querySelector('.email-checkbox').addEventListener('change', (e) => {
+                    updateSelectedEmails(email.id, e.target.checked);
+                });
+                emailItem.addEventListener('click', (e) => {
+                    if (e.target.type !== 'checkbox') {
+                        selectedEmail = email;
+                        showEmailDetail();
+                        document.querySelectorAll('.email-item').forEach(item => item.classList.remove('selected'));
+                        emailItem.classList.add('selected');
+                    }
+                });
+                emailContainer.appendChild(emailItem);
+            });
+
+            if (filteredEmails.length === 0) {
+                emailContainer.innerHTML = '<p style="padding: 10px; color: #888;">No emails found</p>';
+            }
+        }
+
+        function updateSelectedEmails(emailId, checked) {
+            if (checked) selectedEmails.add(emailId);
+            else selectedEmails.delete(emailId);
+            document.getElementById('deleteButton').style.display = selectedEmails.size > 0 ? 'inline-block' : 'none';
+        }
+
+        async function sendEmail() {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            if (!token) {
+                alert('No user logged in. Redirecting to login.');
+                window.location.href = '/login.html';
+                return;
+            }
+            const recipientType = document.getElementById('recipientType').value;
+            const recipient = recipientType === 'internal'
+                ? document.getElementById('internalRecipient').value
+                : document.getElementById('recipient').value.trim();
+            const subject = document.getElementById('subject').value.trim();
+            const body = document.getElementById('body').value.trim();
+
+            if (!recipient || !subject || !body) {
+                alert('Please fill in all fields.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/emails/send', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ recipient, recipient_type: recipientType, subject, body })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                alert('Email sent successfully.');
+                document.getElementById('recipient').value = '';
+                document.getElementById('internalRecipient').value = '';
+                document.getElementById('subject').value = '';
+                document.getElementById('body').value = '';
+                document.getElementById('recipientType').value = 'internal';
+                toggleRecipientInput();
+                showSection('inbox');
+            } catch (error) {
+                console.error('Error during sendEmail:', error.message);
+                alert(`Failed to send email: ${error.message}`);
+            }
+        }
+
+        async function saveDraft() {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            if (!token) {
+                alert('No user logged in. Redirecting to login.');
+                window.location.href = '/login.html';
+                return;
+            }
+            const recipientType = document.getElementById('recipientType').value;
+            const recipient = recipientType === 'internal'
+                ? document.getElementById('internalRecipient').value
+                : document.getElementById('recipient').value.trim();
+            const subject = document.getElementById('subject').value.trim();
+            const body = document.getElementById('body').value.trim();
+
+            if (!recipient || !subject || !body) {
+                alert('Please fill in all fields.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/emails/draft', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ recipient, recipient_type: recipientType, subject, body })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                alert('Draft saved successfully.');
+                document.getElementById('recipient').value = '';
+                document.getElementById('internalRecipient').value = '';
+                document.getElementById('subject').value = '';
+                document.getElementById('body').value = '';
+                document.getElementById('recipientType').value = 'internal';
+                toggleRecipientInput();
+                showSection('outbox');
+            } catch (error) {
+                console.error('Error during saveDraft:', error.message);
+                alert(`Failed to save draft: ${error.message}`);
+            }
+        }
+
+        async function deleteEmails() {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            if (!token) return;
+            try {
+                const response = await fetch('/api/emails/delete', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email_ids: Array.from(selectedEmails) })
+                });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                selectedEmails.clear();
+                document.querySelectorAll('.email-checkbox').forEach(cb => cb.checked = false);
+                document.getElementById('deleteButton').style.display = 'none';
+                fetchEmails(currentSection);
+            } catch (error) {
+                console.error('Error deleting emails:', error);
+                alert(`Failed to delete emails: ${error.message}`);
+            }
+        }
+
+        async function markAsReadSingle(emailId) {
+            const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+            if (!token) return;
+            try {
+                const response = await fetch('/api/emails/mark-read', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email_ids: [emailId] })
+                });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                fetchEmails(currentSection);
+            } catch (error) {
+                console.error('Error marking email as read:', error);
+            }
+        }
+
+        function showSection(section) {
+            currentSection = section;
+            selectedEmails.clear();
+            selectedEmail = null;
+
+            const menuItems = ['newMail', 'inbox', 'outbox', 'sent'];
+            menuItems.forEach(item => {
+                const element = document.getElementById(item);
+                element.classList.toggle('active', item === section);
+            });
+
+            const headers = { newMail: 'New Mail', inbox: 'Inbox', outbox: 'Outbox', sent: 'Sent' };
+            const icons = { newMail: 'fas fa-plus', inbox: 'fas fa-inbox', outbox: 'fas fa-paper-plane', sent: 'fas fa-check' };
+            document.getElementById('headerTitle').innerHTML = `<i class="${icons[section]}"></i> ${headers[section]}`;
+
+            const emailContainer = document.getElementById('emailContainer');
+            const newMailForm = document.getElementById('newMailForm');
+            if (section === 'newMail') {
+                emailContainer.style.display = 'none';
+                newMailForm.style.display = 'block';
+            } else {
+                emailContainer.style.display = 'flex';
+                newMailForm.style.display = 'none';
+                fetchEmails(section);
+                showEmailList();
+            }
+
+            document.getElementById('searchInput').value = '';
+        }
+
+        function showEmailDetail() {
+            if (!selectedEmail) return;
+
+            const placeholder = document.getElementById('emailDetailPlaceholder');
+            const header = document.getElementById('emailDetailHeader');
+            const content = document.getElementById('emailDetailContent');
+            placeholder.style.display = 'none';
+            header.style.display = 'flex';
+            content.style.display = 'block';
+
+            document.getElementById('detailSubject').textContent = selectedEmail.subject;
+            document.getElementById('detailMeta').textContent = `From: ${selectedEmail.sender} | Sent: ${new Date(selectedEmail.sent_at).toLocaleString()}`;
+            document.getElementById('detailBody').textContent = selectedEmail.body;
+
+            if (currentSection === 'inbox' && !selectedEmail.is_read) {
+                markAsReadSingle(selectedEmail.id);
+            }
+        }
+
+        function showEmailList() {
+            const placeholder = document.getElementById('emailDetailPlaceholder');
+            const header = document.getElementById('emailDetailHeader');
+            const content = document.getElementById('emailDetailContent');
+            placeholder.style.display = 'flex';
+            header.style.display = 'none';
+            content.style.display = 'none';
+            selectedEmail = null;
+            document.querySelectorAll('.email-item').forEach(item => item.classList.remove('selected'));
+        }
+
+        function replyEmail() {
+            showSection('newMail');
+            document.getElementById('subject').value = `Re: ${selectedEmail.subject}`;
+            document.getElementById('body').value = `\n\nOn ${new Date(selectedEmail.sent_at).toLocaleString()}, ${selectedEmail.sender} wrote:\n${selectedEmail.body}`;
+            document.getElementById('recipientType').value = selectedEmail.is_external ? 'external' : 'internal';
+            toggleRecipientInput();
+            if (selectedEmail.is_external) {
+                document.getElementById('recipient').value = selectedEmail.sender;
+            } else {
+                document.getElementById('internalRecipient').value = selectedEmail.sender;
+            }
+        }
+
+        function forwardEmail() {
+            showSection('newMail');
+            document.getElementById('subject').value = `Fwd: ${selectedEmail.subject}`;
+            document.getElementById('body').value = `\n\n----- Forwarded Message -----\nFrom: ${selectedEmail.sender}\nSent: ${new Date(selectedEmail.sent_at).toLocaleString()}\nSubject: ${selectedEmail.subject}\n\n${selectedEmail.body}`;
+        }
+    </script>
+</body>
+</html>
