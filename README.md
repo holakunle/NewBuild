@@ -1,0 +1,1 @@
+This is a new build for a study centric software that handles different sections of medical imaging reporting such as study assignment, sharing etc. AI analysis for interpretation of chest images using the ResNet50 model and ChestX data for training with over 110k images this lead to perfect resnetwights for use in identification of chest xrays.
