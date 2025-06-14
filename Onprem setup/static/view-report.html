@@ -114,13 +114,7 @@
 
         const pageSpecificItems = [
             { id: 'menuDashboard', icon: 'fas fa-home', text: 'Dashboard', url: '/index.html', permission: 'view_dashboard' },
-            { id: 'menuRecentStudies', icon: 'fas fa-clock', text: 'Recent Studies', url: '/index.html#recentStudiesSection', permission: 'view_recent_studies' },
-            { id: 'menuAssignedStudies', icon: 'fas fa-tasks', text: 'Assigned Studies', url: '/index.html#assignmentSection', permission: 'view_assigned_studies' },
-            { id: 'menuSearchStudies', icon: 'fas fa-search', text: 'Search Studies', url: '/index.html#searchSection', permission: 'search_studies' },
-            { id: 'menuAIAnalysis', icon: 'fas fa-brain', text: 'AI Analysis', url: '/ai-analysis.html', permission: 'use_ai' },
-            { id: 'menuCreateReport', icon: 'fas fa-file-alt', text: 'Create a Report', url: '/view-report.html', active: true, permission: 'create_report' },
-            { id: 'menuActiveReporting', icon: 'fas fa-file-medical', text: 'Active Reporting', url: '/active-reporting.html', permission: 'create_report' },
-            { id: 'menuAdminPanel', icon: 'fas fa-user-cog', text: 'Admin Panel', url: '/admin.html', permission: 'manage_users' }
+            { id: 'menuViewReports', icon: 'fas fa-file', text: 'View Reports', url: '/view-report.html', active: true, permission: 'create_report' }
         ];
 
         document.addEventListener('DOMContentLoaded', () => {
